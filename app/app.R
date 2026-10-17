@@ -11,7 +11,11 @@ library(DT)
 # the file also be sourced from the repo root.
 app_dir <- if (file.exists("qc.R")) normalizePath(".") else normalizePath("app")
 source(file.path(app_dir, "qc.R"))
-data_dir <- file.path(dirname(app_dir), "data")
+# Locally the CSVs live in the repo's data/ folder, one level above app/.
+# On Posit Connect the bundle is only this folder, so the same CSVs are also in app/data.
+outside_data <- file.path(dirname(app_dir), "data")
+inside_data <- file.path(app_dir, "data")
+data_dir <- if (dir.exists(outside_data)) outside_data else inside_data
 
 theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
 
