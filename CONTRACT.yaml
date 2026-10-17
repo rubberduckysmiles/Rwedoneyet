@@ -28,8 +28,8 @@ tasks:
   - id: H-01
     title: Fill in every FILL IN line in SPEC.md
     points: "15 - Tool Design: scope matches a prompt (5), clear user and use case (5), minimal inputs (5)"
-    status: todo
-    owner: ""
+    status: done
+    owner: "agent + Keep It Cool"
     started_at: ""
     owns: ["SPEC.md"]
     notes: >
@@ -40,7 +40,7 @@ tasks:
       grep -c "FILL IN[.,]" SPEC.md prints 0 (it counts only the blanks,
       not the instructions at the top), and every teammate can say the
       method sentence in SPEC section 4 without reading it.
-    result: ""
+    result: "SPEC.md filled for Keep It Cool. grep -c of FILL IN blanks printed 0"
 
   - id: H-02
     title: Two or three test datasets plus a codebook
