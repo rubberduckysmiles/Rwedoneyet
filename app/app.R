@@ -1,0 +1,553 @@
+# ColdChain Monitor: a Shiny dashboard for the blood-bank operations manager.
+# This file only draws screens. Every number comes from a function in app/R/ (see monitor.R).
+# Start it from the repo root with:  Rscript app/testme.R
+
+library(shiny)
+library(bslib)
+library(plotly)
+library(DT)
+
+# runApp() sets the working directory to this folder, so qc.R is next to us. The fallback lets
+# the file also be sourced from the repo root.
+app_dir <- if (file.exists("qc.R")) normalizePath(".") else normalizePath("app")
+source(file.path(app_dir, "qc.R"))
+data_dir <- file.path(dirname(app_dir), "data")
+
+theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
+
+# One color per test number for flagged points. Red, amber and green are kept for status only.
+TEST_COLORS <- c("#7B2D8E", "#0072B2", "#56B4E9", "#CC79A7", "#8C564B", "#17BECF", "#555555", "#B8860B")
+CAPABLE_SENTENCES <- c("capable and stable", "inside the spec width, but not stable", "not capable")
+
+# ---- Small display helpers -----------------------------------------------------------------------
+
+fmt_num <- function(x, digits = 2) {
+  if (length(x) != 1 || is.na(x)) "\u2014" else formatC(x, format = "f", digits = digits)
+}
+
+time_text <- function(t) format(t, "%Y-%m-%d %H:%M:%S")
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+safe_id <- function(id) gsub("[^A-Za-z0-9_]", "_", id)
+
+status_badge <- function(a) {
+  text_color <- if (a$status == "amber") "#212529" else "#FFFFFF"
+  tags$span(
+    class = "badge rounded-pill",
+    style = sprintf("background-color:%s;color:%s;", a$status_color, text_color),
+    a$status_label
+  )
+}
+
+# Theme the plot for light or dark mode and hide the toolbar.
+themed <- function(p, dark) {
+  fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
+  grid <- if (isTRUE(dark)) "rgba(255,255,255,0.12)" else "rgba(0,0,0,0.10)"
+  p %>%
+    layout(
+      paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)",
+      font = list(color = fg),
+      xaxis = list(gridcolor = grid, zerolinecolor = grid),
+      yaxis = list(gridcolor = grid, zerolinecolor = grid),
+      legend = list(orientation = "h", y = -0.2)
+    ) %>%
+    config(displayModeBar = FALSE)
+}
+
+empty_plot <- function(text, dark = FALSE) {
+  plot_ly() %>%
+    layout(annotations = list(text = text, showarrow = FALSE, x = 0.5, y = 0.5, xref = "paper", yref = "paper"),
+           xaxis = list(visible = FALSE), yaxis = list(visible = FALSE)) %>%
+    themed(dark)
+}
+
+hline <- function(y, color, dash = "dash", width = 1) {
+  list(type = "line", xref = "paper", x0 = 0, x1 = 1, yref = "y", y0 = y, y1 = y,
+       line = list(color = color, dash = dash, width = width))
+}
+
+vline <- function(x, color = "#6C757D") {
+  list(type = "line", xref = "x", x0 = x, x1 = x, yref = "paper", y0 = 0, y1 = 1,
+       line = list(color = color, dash = "dash", width = 2))
+}
+
+# Rows of the subgroup table inside the chosen date range.
+visible_rows <- function(a, dates) {
+  t <- a$subgroups$time
+  if (is.null(dates) || length(dates) < 2 || anyNA(dates)) return(rep(TRUE, length(t)))
+  as.Date(t) >= dates[1] & as.Date(t) <= dates[2]
+}
+
+# Gray block over the baseline hours.
+baseline_shape <- function(d) {
+  b <- d[d$baseline, , drop = FALSE]
+  if (nrow(b) == 0) return(NULL)
+  list(type = "rect", xref = "x", yref = "paper", y0 = 0, y1 = 1,
+       x0 = time_text(min(b$time)), x1 = time_text(max(b$time) + 3600),
+       fillcolor = "rgba(110,110,110,0.28)", line = list(width = 0), layer = "below")
+}
+
+# ---- Plots ---------------------------------------------------------------------------------------
+
+sparkline_plot <- function(a) {
+  d <- utils::tail(a$subgroups, 48)
+  if (nrow(d) == 0) return(empty_plot("no hourly data"))
+  p <- plot_ly(d, x = ~time, y = ~mean, type = "scatter", mode = "lines",
+               line = list(color = a$status_color, width = 2),
+               text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text")
+  shapes <- list()
+  if (a$has_limits) {
+    lim <- a$baseline$limits$xbar
+    shapes <- list(hline(lim$lcl, "rgba(128,128,128,0.7)", "dot"), hline(lim$ucl, "rgba(128,128,128,0.7)", "dot"))
+  }
+  p %>%
+    layout(shapes = shapes, margin = list(l = 2, r = 2, t = 2, b = 2),
+           xaxis = list(visible = FALSE), yaxis = list(visible = FALSE),
+           paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
+    config(displayModeBar = FALSE)
+}
+
+xbar_plot <- function(a, keep, zone_lines, dark) {
+  if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
+  d <- a$subgroups
+  d$min_test <- a$xbar_min_test
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0) return(empty_plot("no hours in this date range", dark))
+  lim <- a$baseline$limits$xbar
+
+  p <- plot_ly() %>%
+    add_lines(x = d$time, y = d$mean, line = list(color = "rgba(120,120,120,0.8)", width = 1),
+              hoverinfo = "skip", showlegend = FALSE)
+  ok <- d[is.na(d$min_test), , drop = FALSE]
+  p <- p %>% add_markers(x = ok$time, y = ok$mean, marker = list(color = "#6C757D", size = 5),
+                         text = sprintf("%s<br>Mean %.2f C", time_text(ok$time), ok$mean),
+                         hoverinfo = "text", name = "Hourly mean")
+  for (k in sort(unique(stats::na.omit(d$min_test)))) {
+    f <- d[!is.na(d$min_test) & d$min_test == k, , drop = FALSE]
+    p <- p %>% add_markers(
+      x = f$time, y = f$mean, marker = list(color = TEST_COLORS[k], size = 10, line = list(color = "#FFFFFF", width = 1)),
+      text = sprintf("%s<br>Mean %.2f C<br>Test %d: %s", time_text(f$time), f$mean, k, a$tests[[k]]$meaning),
+      hoverinfo = "text", name = paste("Test", k)
+    )
+  }
+  line_x <- range(d$time)
+  add_ref <- function(p, y, name, dash, color) {
+    p %>% add_lines(x = line_x, y = c(y, y), name = name, line = list(color = color, dash = dash, width = 1.5),
+                    text = sprintf("%s %.3f C", name, y), hoverinfo = "text")
+  }
+  p <- p %>%
+    add_ref(lim$ucl, "UCL", "dash", "#444444") %>%
+    add_ref(lim$center, "Center", "solid", "#444444") %>%
+    add_ref(lim$lcl, "LCL", "dash", "#444444")
+  if (isTRUE(zone_lines)) {
+    for (z in c(lim$zone1, lim$zone2)) {
+      p <- p %>%
+        add_lines(x = line_x, y = rep(lim$center + z, 2), line = list(color = "rgba(90,90,90,0.5)", dash = "dot", width = 1),
+                  hoverinfo = "skip", showlegend = FALSE) %>%
+        add_lines(x = line_x, y = rep(lim$center - z, 2), line = list(color = "rgba(90,90,90,0.5)", dash = "dot", width = 1),
+                  hoverinfo = "skip", showlegend = FALSE)
+    }
+  }
+
+  bands <- zone_bands(lim)
+  alpha <- c(0.05, 0.11, 0.18)[bands$depth]
+  shapes <- lapply(seq_len(nrow(bands)), function(i) {
+    list(type = "rect", xref = "paper", x0 = 0, x1 = 1, yref = "y", y0 = bands$y0[i], y1 = bands$y1[i],
+         fillcolor = sprintf("rgba(100,120,150,%.2f)", alpha[i]), line = list(width = 0), layer = "below")
+  })
+  base <- baseline_shape(d)
+  if (!is.null(base)) shapes <- c(shapes, list(base))
+
+  p %>%
+    layout(shapes = shapes, yaxis = list(title = "Hourly mean (\u00B0C)"), xaxis = list(title = ""),
+           title = list(text = "X-bar chart (gray = baseline hours, limits frozen)", font = list(size = 14))) %>%
+    themed(dark)
+}
+
+range_plot <- function(a, keep, dark) {
+  if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
+  d <- a$subgroups
+  d$flag <- a$range_flagged
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0) return(empty_plot("no hours in this date range", dark))
+  lim <- a$baseline$limits$range
+  line_x <- range(d$time)
+  f <- d[d$flag, , drop = FALSE]
+  ok <- d[!d$flag, , drop = FALSE]
+
+  p <- plot_ly() %>%
+    add_lines(x = d$time, y = d$range, line = list(color = "rgba(120,120,120,0.8)", width = 1),
+              hoverinfo = "skip", showlegend = FALSE) %>%
+    add_markers(x = ok$time, y = ok$range, marker = list(color = "#6C757D", size = 5),
+                text = sprintf("%s<br>Range %.2f C", time_text(ok$time), ok$range), hoverinfo = "text", name = "Hourly range")
+  if (nrow(f) > 0) {
+    p <- p %>% add_markers(x = f$time, y = f$range, marker = list(color = TEST_COLORS[1], size = 10),
+                           text = sprintf("%s<br>Range %.2f C<br>Test 1: %s", time_text(f$time), f$range, a$range_test$meaning),
+                           hoverinfo = "text", name = "Test 1")
+  }
+  for (spec in list(list("UCL", lim$ucl, "dash"), list("Center", lim$center, "solid"), list("LCL", lim$lcl, "dash"))) {
+    p <- p %>% add_lines(x = line_x, y = rep(spec[[2]], 2), name = spec[[1]],
+                         line = list(color = "#444444", dash = spec[[3]], width = 1.5),
+                         text = sprintf("%s %.3f C", spec[[1]], spec[[2]]), hoverinfo = "text")
+  }
+  base <- baseline_shape(d)
+  p %>%
+    layout(shapes = if (is.null(base)) list() else list(base),
+           yaxis = list(title = "Hourly range (\u00B0C)"), xaxis = list(title = ""),
+           title = list(text = "Range chart", font = list(size = 14))) %>%
+    themed(dark)
+}
+
+histogram_plot <- function(a, dark) {
+  if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
+  shapes <- list(vline(SPEC_LOW, "#444444"), vline(TARGET_TEMP, "#6C757D"), vline(SPEC_HIGH, "#444444"))
+  notes <- list(
+    list(x = SPEC_LOW, text = "1 \u00B0C (lower spec)"),
+    list(x = TARGET_TEMP, text = "3.5 \u00B0C (target)"),
+    list(x = SPEC_HIGH, text = "6 \u00B0C (upper spec)")
+  )
+  notes <- lapply(notes, function(n) c(n, list(y = 1, yref = "paper", xref = "x", showarrow = FALSE, yanchor = "bottom")))
+  plot_ly(x = a$base_readings, type = "histogram", nbinsx = 30, marker = list(color = "#6C757D"),
+          hovertemplate = "%{x} C: %{y} readings<extra></extra>") %>%
+    layout(shapes = shapes, annotations = notes,
+           xaxis = list(title = "Baseline temperature (\u00B0C)", range = c(0.5, 6.5)),
+           yaxis = list(title = "Readings"), showlegend = FALSE,
+           margin = list(t = 40)) %>%
+    themed(dark)
+}
+
+rolling_plot <- function(a, dark) {
+  if (length(a$rolling_ppk) == 0) return(empty_plot("need at least 24 hours of readings", dark))
+  plot_ly(x = a$rolling_time, y = a$rolling_ppk, type = "scatter", mode = "lines",
+          line = list(color = "#444444", width = 2),
+          text = sprintf("%s<br>Ppk %s", time_text(a$rolling_time), formatC(a$rolling_ppk, format = "f", digits = 2)),
+          hoverinfo = "text") %>%
+    layout(yaxis = list(title = "Rolling 24-hour Ppk"), xaxis = list(title = ""), showlegend = FALSE) %>%
+    themed(dark)
+}
+
+generator_plots <- function(g, dark) {
+  lim <- g$limits
+  idx <- seq_len(g$n)
+  x <- g$x
+  f <- g$flagged
+  is_flag <- idx %in% f
+  ind <- plot_ly() %>%
+    add_lines(x = idx, y = x, line = list(color = "rgba(120,120,120,0.8)", width = 1), hoverinfo = "skip", showlegend = FALSE) %>%
+    add_markers(x = idx[!is_flag], y = x[!is_flag], marker = list(color = "#6C757D", size = 6),
+                text = sprintf("%s<br>%.1f s", g$labels[!is_flag], x[!is_flag]), hoverinfo = "text", name = "Transfer time")
+  if (length(f) > 0) {
+    ind <- ind %>% add_markers(x = idx[f], y = x[f], marker = list(color = TEST_COLORS[1], size = 10),
+                               text = sprintf("%s<br>%.1f s<br>Outside the limits", g$labels[f], x[f]),
+                               hoverinfo = "text", name = "Test 1")
+  }
+  shapes <- list(hline(10, "#444444", "solid", 2))
+  if (!is.na(lim$ucl)) {
+    shapes <- c(shapes, list(hline(lim$center, "#888888", "solid"), hline(lim$ucl, "#888888", "dash"), hline(lim$lcl, "#888888", "dash")))
+  }
+  ind <- ind %>%
+    layout(shapes = shapes,
+           annotations = list(list(x = 1, xref = "paper", y = 10, yref = "y", text = "10 s limit", showarrow = FALSE,
+                                   xanchor = "right", yanchor = "bottom")),
+           xaxis = list(title = "Test number (in date order)"), yaxis = list(title = "Transfer time (s)"),
+           title = list(text = "Individuals chart", font = list(size = 14))) %>%
+    themed(dark)
+
+  has_mr <- !is.na(g$moving_range)
+  mr <- plot_ly() %>%
+    add_lines(x = idx[has_mr], y = g$moving_range[has_mr], line = list(color = "rgba(120,120,120,0.8)", width = 1),
+              hoverinfo = "skip", showlegend = FALSE) %>%
+    add_markers(x = idx[has_mr], y = g$moving_range[has_mr], marker = list(color = "#6C757D", size = 6),
+                text = sprintf("%s<br>Moving range %.1f s", g$labels[has_mr], g$moving_range[has_mr]),
+                hoverinfo = "text", name = "Moving range")
+  mr_shapes <- if (is.na(lim$mr_ucl)) list() else list(hline(lim$mr_center, "#888888", "solid"),
+                                                       hline(lim$mr_ucl, "#888888", "dash"), hline(lim$mr_lcl, "#888888", "dash"))
+  mr <- mr %>%
+    layout(shapes = mr_shapes, xaxis = list(title = "Test number (in date order)"),
+           yaxis = list(title = "Moving range (s)"), showlegend = FALSE,
+           title = list(text = "Moving-range chart", font = list(size = 14))) %>%
+    themed(dark)
+  list(individuals = ind, moving_range = mr)
+}
+
+# ---- UI ------------------------------------------------------------------------------------------
+
+ui <- bslib::page_navbar(
+  title = "ColdChain Monitor",
+  id = "main_nav",
+  theme = theme,
+  fillable = FALSE,
+
+  bslib::nav_panel(
+    "Overview",
+    tags$p(class = "text-muted mb-1", "Limits are frozen from the first 48 hours. Later hours are judged against those limits."),
+    tags$p(class = "text-muted small", "How to read the badge: red means act this shift, amber means watch, green means leave it."),
+    uiOutput("overview_boxes"),
+    uiOutput("fridge_cards")
+  ),
+
+  bslib::nav_panel(
+    "Fridge Detail",
+    bslib::layout_sidebar(
+      sidebar = bslib::sidebar(
+        selectInput("fridge", "Fridge", choices = character(0)),
+        dateRangeInput("dates", "Date range"),
+        checkboxInput("zone_lines", "Show zone lines (1 and 2 sigma)", value = TRUE)
+      ),
+      bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
+      bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
+      bslib::card(bslib::card_header("Violations"), DT::DTOutput("violations_table"))
+    )
+  ),
+
+  bslib::nav_panel(
+    "Capability",
+    selectInput("cap_fridge", "Fridge", choices = character(0)),
+    uiOutput("capability_top"),
+    bslib::layout_columns(
+      col_widths = bslib::breakpoints(sm = 12, lg = 6),
+      bslib::card(bslib::card_header("Baseline readings against the spec"), plotlyOutput("hist_chart", height = "320px")),
+      bslib::card(bslib::card_header("Rolling 24-hour Ppk"), plotlyOutput("rolling_chart", height = "320px"))
+    )
+  ),
+
+  bslib::nav_panel(
+    "Generator",
+    uiOutput("generator_note"),
+    bslib::card(plotlyOutput("gen_ind_chart", height = "320px"), full_screen = TRUE),
+    bslib::card(plotlyOutput("gen_mr_chart", height = "260px"), full_screen = TRUE)
+  ),
+
+  bslib::nav_panel(
+    "Data",
+    bslib::layout_columns(
+      col_widths = bslib::breakpoints(sm = 12, md = 4),
+      fileInput("up_readings", "Readings (fridge_id, timestamp, temp_c, door_open, on_generator)", accept = ".csv"),
+      fileInput("up_inventory", "Inventory (fridge_id, blood_units)", accept = ".csv"),
+      fileInput("up_generator", "Generator log (date, transfer_time_sec)", accept = ".csv")
+    ),
+    actionButton("load_demo", "Load demo data", class = "btn-primary mb-3"),
+    uiOutput("data_status"),
+    bslib::navset_card_tab(
+      title = "Preview",
+      bslib::nav_panel("Readings", DT::DTOutput("preview_readings")),
+      bslib::nav_panel("Inventory", DT::DTOutput("preview_inventory")),
+      bslib::nav_panel("Generator log", DT::DTOutput("preview_generator"))
+    )
+  ),
+
+  bslib::nav_spacer(),
+  bslib::nav_item(bslib::input_dark_mode(id = "color_mode"))
+)
+
+# ---- Server --------------------------------------------------------------------------------------
+
+server <- function(input, output, session) {
+  demo <- load_demo_data(data_dir)
+  rv <- reactiveValues(
+    readings = demo$readings, inventory = demo$inventory, generator = demo$generator,
+    from_readings = if (is.null(demo$readings)) "none" else "demo data",
+    from_inventory = if (is.null(demo$inventory)) "none" else "demo data",
+    from_generator = if (is.null(demo$generator)) "none" else "demo data"
+  )
+
+  dark <- reactive(identical(input$color_mode, "dark"))
+
+  analyses <- reactive(analyze_all(rv$readings, rv$inventory))
+  summary_numbers <- reactive(overview_summary(analyses(), rv$generator))
+  gen <- reactive(generator_analysis(rv$generator))
+
+  # ---- Data page
+  try_upload <- function(file, prepare, slot, label) {
+    tryCatch({
+      data <- prepare(utils::read.csv(file$datapath, stringsAsFactors = FALSE))
+      rv[[slot]] <- data
+      rv[[paste0("from_", slot)]] <- file$name
+    }, error = function(e) {
+      showNotification(paste0("Could not load ", label, ": ", conditionMessage(e)), type = "error", duration = 12)
+    })
+  }
+  observeEvent(input$up_readings, try_upload(input$up_readings, prepare_readings, "readings", "readings"))
+  observeEvent(input$up_inventory, try_upload(input$up_inventory, prepare_inventory, "inventory", "inventory"))
+  observeEvent(input$up_generator, try_upload(input$up_generator, prepare_generator, "generator", "generator log"))
+
+  observeEvent(input$load_demo, {
+    d <- load_demo_data(data_dir)
+    if (is.null(d$readings)) {
+      showNotification("Demo data not found. Expected data/readings.csv next to the app folder.", type = "error")
+      return()
+    }
+    rv$readings <- d$readings
+    rv$inventory <- d$inventory
+    rv$generator <- d$generator
+    rv$from_readings <- rv$from_inventory <- rv$from_generator <- "demo data"
+    showNotification("Demo data loaded.", type = "message")
+  })
+
+  output$data_status <- renderUI({
+    tags$p(class = "text-muted",
+           sprintf("Readings: %s. Inventory: %s. Generator log: %s.", rv$from_readings, rv$from_inventory, rv$from_generator))
+  })
+
+  preview_table <- function(df) {
+    if (is.null(df)) return(DT::datatable(data.frame(note = "Nothing loaded."), rownames = FALSE, options = list(dom = "t")))
+    show <- df
+    if ("timestamp" %in% names(show)) show$timestamp <- time_text(show$timestamp)
+    DT::datatable(show, rownames = FALSE, options = list(pageLength = 10, dom = "tip"))
+  }
+  output$preview_readings <- DT::renderDT(preview_table(rv$readings))
+  output$preview_inventory <- DT::renderDT(preview_table(rv$inventory))
+  output$preview_generator <- DT::renderDT(preview_table(rv$generator))
+
+  # ---- Fridge pickers
+  observeEvent(analyses(), {
+    ids <- sort(names(analyses()))
+    updateSelectInput(session, "fridge", choices = ids, selected = if (isTRUE(input$fridge %in% ids)) input$fridge else ids[1])
+    updateSelectInput(session, "cap_fridge", choices = ids, selected = if (isTRUE(input$cap_fridge %in% ids)) input$cap_fridge else ids[1])
+  }, ignoreNULL = FALSE)
+
+  detail <- reactive({
+    req(input$fridge)
+    a <- analyses()[[input$fridge]]
+    req(a)
+    a
+  })
+
+  observeEvent(list(input$fridge, analyses()), {
+    if (!isTruthy(input$fridge)) return()
+    a <- analyses()[[input$fridge]]
+    if (is.null(a) || nrow(a$subgroups) == 0) return()
+    first <- as.Date(min(a$subgroups$time))
+    last <- as.Date(max(a$subgroups$time))
+    updateDateRangeInput(session, "dates", start = first, end = last, min = first, max = last)
+  })
+
+  # ---- Overview
+  output$overview_boxes <- renderUI({
+    if (length(analyses()) == 0) {
+      return(tags$div(class = "alert alert-info", "No readings loaded. Open the Data page and press Load demo data."))
+    }
+    s <- summary_numbers()
+    bslib::layout_columns(
+      fill = FALSE,
+      col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 3),
+      bslib::value_box("Fridges needing action", s$needing_action, tags$small(sprintf("of %d fridges (red or amber)", length(analyses())))),
+      bslib::value_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), tags$small("out of range now, or flagged in the last 24 h")),
+      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2), tags$small("mean of the baseline Ppk values")),
+      bslib::value_box("Last generator transfer",
+                       if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s"),
+                       tags$small(if (is.na(s$last_transfer)) "no generator log loaded" else "limit is 10 s"))
+    )
+  })
+
+  output$fridge_cards <- renderUI({
+    list_a <- analyses()
+    if (length(list_a) == 0) return(NULL)
+    cards <- lapply(list_a, function(a) {
+      bslib::card(
+        fill = FALSE,
+        bslib::card_header(
+          class = "d-flex justify-content-between align-items-center",
+          tags$strong(a$fridge_id), status_badge(a)
+        ),
+        plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "90px"),
+        tags$div(
+          class = "row text-center small g-1 mb-2",
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
+        ),
+        tags$p(class = "mb-0 small", a$flag_sentence)
+      )
+    })
+    do.call(bslib::layout_columns,
+            c(list(fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 4)), unname(cards)))
+  })
+
+  observe({
+    for (a_id in names(analyses())) {
+      local({
+        id <- a_id
+        output[[paste0("spark_", safe_id(id))]] <- renderPlotly(sparkline_plot(analyses()[[id]]))
+      })
+    }
+  })
+
+  # ---- Fridge Detail
+  output$xbar_chart <- renderPlotly({
+    a <- detail()
+    xbar_plot(a, visible_rows(a, input$dates), input$zone_lines, dark())
+  })
+  output$range_chart <- renderPlotly({
+    a <- detail()
+    range_plot(a, visible_rows(a, input$dates), dark())
+  })
+  output$violations_table <- DT::renderDT({
+    a <- detail()
+    v <- a$violations
+    v <- v[as.Date(v$time) >= (input$dates[1] %||% as.Date("1970-01-01")) &
+             as.Date(v$time) <= (input$dates[2] %||% as.Date("2999-01-01")), , drop = FALSE]
+    shown <- data.frame(Time = time_text(v$time), Chart = v$chart, Test = v$test, Meaning = v$meaning,
+                        stringsAsFactors = FALSE)
+    DT::datatable(shown, rownames = FALSE, options = list(pageLength = 8, dom = "tip"),
+                  caption = if (nrow(shown) == 0) "No violations in this date range." else NULL)
+  })
+
+  # ---- Capability
+  cap <- reactive({
+    req(input$cap_fridge)
+    a <- analyses()[[input$cap_fridge]]
+    req(a)
+    a
+  })
+
+  output$capability_top <- renderUI({
+    a <- cap()
+    sentence <- if (a$capable_sentence %in% CAPABLE_SENTENCES) {
+      paste0(a$fridge_id, " is ", a$capable_sentence, ".")
+    } else {
+      paste0(a$fridge_id, ": ", a$capable_sentence)
+    }
+    lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
+      sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
+    tagList(
+      bslib::layout_columns(
+        fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
+        bslib::value_box("Cpk (short-term sigma)", fmt_num(a$cpk, 2)),
+        bslib::value_box("Ppk (overall sigma)", fmt_num(a$ppk, 2)),
+        bslib::value_box("Gap (Cpk minus Ppk)", fmt_num(a$gap, 2))
+      ),
+      bslib::card(fill = FALSE, tags$h4(class = "mb-1", sentence), tags$p(class = "text-muted small mb-0", lag_text))
+    )
+  })
+  output$hist_chart <- renderPlotly(histogram_plot(cap(), dark()))
+  output$rolling_chart <- renderPlotly(rolling_plot(cap(), dark()))
+
+  # ---- Generator
+  output$generator_note <- renderUI({
+    g <- gen()
+    if (is.null(g)) {
+      return(tags$div(class = "alert alert-warning", "No generator log loaded. Add one on the Data page. The Overview box shows a dash until then."))
+    }
+    msg <- g$limits$message
+    tags$p(class = "text-muted", if (nzchar(msg)) msg else
+      sprintf("%d transfer tests. The solid dark line is the 10 second limit.", g$n))
+  })
+  gen_plots <- reactive({
+    g <- gen()
+    req(g)
+    generator_plots(g, dark())
+  })
+  output$gen_ind_chart <- renderPlotly({
+    validate(need(!is.null(gen()), "No generator log loaded."))
+    gen_plots()$individuals
+  })
+  output$gen_mr_chart <- renderPlotly({
+    validate(need(!is.null(gen()), "No generator log loaded."))
+    gen_plots()$moving_range
+  })
+}
+
+shinyApp(ui, server)
