@@ -1,0 +1,76 @@
+# Hi friends!
+
+This is the handoff for ColdChain Monitor. Temp title!!
+H-01 through H-07 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). H-08 is not started, this one will push to DevPost. Please do not mark it done until the checks below are actually run.
+
+The live app, with no login, is [ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). A logged-out request returned HTTP 200 and the page title ColdChain Monitor. Access on Connect is set so anyone can open it. Leave it that way. Judges have to open it without an account.
+
+Virtual DL deadline is Friday, October 23, 2026, 3:00 PM ET. The prompt is Blood Banks. The user is the blood-bank operations manager who decides, each shift, which fridge to service or evacuate before red blood cells leave 1–6 °C.
+
+## Read these first
+
+Read them in this order. The later files assume the earlier ones.
+
+1. [SPEC.md](SPEC.md), section 4. This is the method and the hand-check numbers. Every teammate should be able to say that paragraph without reading it. If the app and SPEC disagree, SPEC wins and the code is the bug.
+2. [docs/plan.md](docs/plan.md). The formulas, the badge rules, and the risk-priority scores. These were decided on purpose. Do not quietly change the 1.0 capability cutoff, the bag bands, or the occurrence scores.
+3. [README.md](README.md). What the tool is, every input, every function argument, how to run it, and the live URL.
+4. [demo/README.md](demo/README.md). The six fridges and the numbers the demo prints. If you cannot explain a number on that page, it is not ready to show a judge.
+5. [data/README.md](data/README.md). The codebook. All of `data/` is synthetic, seed 5300. Say that out loud if someone asks where the data came from.
+6. [CONTRACT.yaml](CONTRACT.yaml). The task ledger. One task at a time. H-08 is the only one left.
+
+## What is already built
+
+| Task | What exists |
+|---|---|
+| H-01 | SPEC.md is filled in. No `FILL IN` blanks left. |
+| H-02 | `readings.csv`, `inventory.csv`, `generator_log.csv`, and the codebook. Six fridges, one reading every 15 minutes, 2026-10-01 through 2026-10-07. |
+| H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. Tests printed `FAIL 0 PASS 482`. |
+| H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge Detail, Capability, Generator, Data. |
+| H-05 | `demo/show_numbers.R` and the demo walk-through. It prints `DEMO OK`. |
+| H-06 | GitHub Actions deploys `app/` to the course Posit Connect server. The publisher key is only in GitHub Actions secrets. |
+| H-07 | The root README and `app/README.md`. |
+
+The known-answer check is ten hours of temperatures whose hour means are all exactly 3.5 °C. Sigma short is 0.2569046516. Cpk is 3.2437456007. Ppk is 3.6984390192. The gap is negative on that set because the hour means do not move. Constant data, every reading 3.5 °C, makes Cpk and Ppk missing. They are never infinity. `Rscript app/workflow.R` prints `WORKFLOW OK` when this still matches.
+
+On the demo data the overview is: 6 fridges needing action, 283 blood units at risk, average Ppk 5.719, last generator transfer 48 seconds. The fridge table, including why F04 is red with 0 bags at risk, is in [demo/README.md](demo/README.md).
+
+## Please review these before changing anything
+
+The statistics are the graded part. Read the function, then the test next to it.
+
+- `app/R/` holds one file per piece: subgroups and the two sigmas, `d2` and `d3`, control limits, the frozen baseline, the eight special-cause tests, the forecast, the risk scores, and the generator individuals chart. `tests/` has the matching tests. The ten-hour rows live in `tests/known_rows.R`, not in a fourth CSV.
+- `d2` and `d3` are computed with `ptukey` and `integrate`. Do not replace them with a table, and do not switch sigma short over to a range-chart constant. The generator chart is the one place that uses mean moving range divided by `d2`, and that is only because it is an individuals chart.
+- Do not call the eight tests by a person's name anywhere in the app, the tests, or the README. The functions are `special_cause_test_1` through `special_cause_test_8`. A point exactly on a line is not a flag.
+- No costs anywhere. The risk number is severity times occurrence times urgency. Urgency is hours until 1 °C or 6 °C. It replaces the usual detection score, and [docs/plan.md](docs/plan.md) says so.
+- Limits freeze after the first 48 hours. Later data must not move them. The Overview page says this. Lag-1 autocorrelation is printed as a limitation and is not used to widen the limits.
+
+Two demo results look surprising and are not formula bugs. Please decide together whether to leave them.
+
+- F01 was planted as healthy and comes out amber. Test 2 fired: nine hourly means sat on one side of the center. That can happen because readings 15 minutes apart are not independent.
+- F06 is the healthy fridge with a normal defrost, and it comes out red. Test 1 fired on the range chart at the defrost hour. Its 55 bags are in the 283 units at risk.
+
+F02 is the one to talk about first. The compressor drifts, it is already above 6 °C, it holds 180 bags, and its risk priority number is 900.
+
+## How to run it
+
+From the repo root:
+
+```bash
+Rscript app/testme.R
+```
+
+Open http://127.0.0.1:5763. Stop it with Ctrl-C. Needs R with `shiny`, `bslib`, `plotly`, `DT`, and `testthat`. This copy was built on R 4.5.2.
+
+```bash
+Rscript app/workflow.R
+Rscript demo/show_numbers.R
+Rscript -e 'testthat::test_dir("tests")'
+```
+
+If you regenerate the CSVs with `Rscript data/make_data.R`, copy the three files into `app/data/` as well. The published app only receives the `app/` folder. Then run `Rscript app/manifestme.R` on your own machine and commit the new `manifest.json`. Do not let GitHub Actions rewrite the manifest.
+
+## What is left
+
+H-08 is still `todo`. It owns `.gitignore` only. Its check is: clone the public repo into an empty folder, run `Rscript app/testme.R` and the tests with no extra steps, confirm `git grep -i "api_key"` finds no real key, and submit the repo on Devpost. The repo is already public. The Devpost submission is a person, not a commit. The live URL to paste there is the Connect link at the top of this note.
+
+Do not put the Connect publisher key, or any other secret, in a file, a commit, or the chat. It stays in the GitHub Actions secrets named `CONNECT_SERVER` and `CONNECT_API_KEY`.
