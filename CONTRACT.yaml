@@ -105,7 +105,7 @@ tasks:
   - id: H-06
     title: Deploy to the course Posit Connect server
     points: "protects the 25 working-tool points - judges must be able to open it"
-    status: in_progress
+    status: done
     owner: "agent + Keep It Cool"
     started_at: "2026-10-16 23:44"
     owns: [".github/workflows/", ".github/scripts/", "app/manifest.json", "app/.python-version"]
@@ -120,7 +120,7 @@ tasks:
     definition_of_done: >
       The workflow run is green, and the public URL answers HTTP 200 from a
       logged-out browser and returns the H-03 numbers for one test dataset.
-    result: ""
+    result: "Actions run 39000580151 completed success. A logged-out browser loaded the published app, and Rscript app/workflow.R printed WORKFLOW OK with the SPEC known answer."
 
   - id: H-07
     title: README and function documentation
