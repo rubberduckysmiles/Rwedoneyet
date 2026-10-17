@@ -1,10 +1,38 @@
-# ColdChain Monitor
+# ColdChain Monitor app
 
-ColdChain Monitor watches blood-bank refrigerators (safe range 1 to 6 C) for the operations manager.
-It freezes control limits from the first 48 hours, then flags later hours that break them.
-Each fridge gets a red, amber, or green badge, a risk number, and the hours until it may leave range.
+Shiny dashboard for the blood-bank operations manager. It ranks refrigerators so a shift can service or evacuate a fridge before red blood cells leave 1–6 °C. The full method, every function argument, and the hand-check numbers are in the repo [README](../README.md). The dataset walk-through is [demo/README.md](../demo/README.md).
 
-Start the app (open http://127.0.0.1:5763): `Rscript app/testme.R`
-Check the numbers against the known answer in SPEC.md section 4: `Rscript app/workflow.R`
+Statistics live in `R/`. `qc.R` only sources those files. `app.R` only draws them.
 
-All statistics live in `app/R/`; `app/app.R` only draws them. No secrets are needed.
+## Run
+
+From the repo root:
+
+```bash
+Rscript app/testme.R
+```
+
+Open http://127.0.0.1:5763. No arguments. Stop with Ctrl-C.
+
+```bash
+Rscript app/workflow.R
+```
+
+Prints `WORKFLOW OK` when the ten-hour example matches SPEC.md section 4.
+
+## The four scripts
+
+| Script | What it does |
+|---|---|
+| `testme.R` | Starts the app on http://127.0.0.1:5763. |
+| `workflow.R` | Checks the known-answer numbers, then runs fridge F01 from `data/readings.csv` through `freeze_baseline`. |
+| `manifestme.R` | Writes `manifest.json` on this machine. Run `Rscript app/manifestme.R` from the repo root after the app files change. Do not run it in GitHub Actions. |
+| `deployme.R` | Local publish stub. The live publish is the GitHub Actions workflow, which uses the committed manifest. |
+
+## Published app
+
+[ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). Content name `rubberduckysmiles-Rwedoneyet-shiny`. The Connect bundle is this folder, so the demo CSVs also live in `app/data/`. Locally, if `data/` exists next to `app/`, the app reads that folder instead.
+
+## Pages
+
+Overview, Fridge Detail, Capability, Generator, and Data. Red means act this shift, amber means watch, green means leave it. Limits stay frozen after the first 48 hours, and the Overview page says so.
