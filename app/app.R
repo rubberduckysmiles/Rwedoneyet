@@ -119,6 +119,7 @@ xbar_plot <- function(a, keep, zone_lines, dark) {
   d <- d[keep, , drop = FALSE]
   if (nrow(d) == 0) return(empty_plot("no hours in this date range", dark))
   lim <- a$baseline$limits$xbar
+  mean_val <- mean(d$mean, na.rm = TRUE)
 
   p <- plot_ly() %>%
     add_lines(x = d$time, y = d$mean, line = list(color = "rgba(120,120,120,0.8)", width = 1),
@@ -141,6 +142,8 @@ xbar_plot <- function(a, keep, zone_lines, dark) {
                     text = sprintf("%s %.3f C", name, y), hoverinfo = "text")
   }
   p <- p %>%
+    add_lines(x = line_x, y = c(mean_val, mean_val), name = "Dataset Mean", line = list(color = "black", dash = "dot", width = 1.5),
+              text = sprintf("Dataset Mean %.3f C", mean_val), hoverinfo = "text") %>%
     add_ref(lim$ucl, "UCL", "dash", "#444444") %>%
     add_ref(lim$center, "Center", "solid", "#444444") %>%
     add_ref(lim$lcl, "LCL", "dash", "#444444")
