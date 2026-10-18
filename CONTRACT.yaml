@@ -202,3 +202,70 @@ tasks:
       chart JSON and note back out. app/manifest.json re-checksummed for the
       three changed bundled files; platform stays 4.5.2 so the deploy does not
       move off the R version Connect already has.
+
+  - id: H-10
+    title: Standard deviation (s) control chart on Fridge Detail
+    points: "tool depth: a third control chart, so dispersion has its own chart instead of being implied by the range chart"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["SPEC.md", "app/R/", "app/app.R", "app/manifest.json", "tests/"]
+    notes: >
+      The app charts hourly means (X-bar) and hourly ranges, and estimates sigma
+      from the within-subgroup variances to draw both sets of limits, but it has
+      no chart of the subgroup standard deviations themselves. Add one, on the
+      same shape as the range chart: same test 1 only, same frozen baseline, same
+      strict comparisons (a point exactly on a line is never a flag).
+      The constants are COMPUTED, not looked up, matching range_constants.R:
+      c4 = sqrt(2/(n-1)) * Gamma(n/2) / Gamma((n-1)/2), which gives E[s] = c4*sigma
+      and sd(s) = sigma*sqrt(1-c4^2). Limits are c4*sigma_short +/- 3 sd(s), with
+      the lower limit held at 0 because an sd cannot be negative. sigma_short is
+      the pooled within-subgroup estimate freeze_baseline already computes.
+      DISPLAY ONLY, like the blood types: s-chart flags must NOT feed the badge,
+      the RPN, units_at_risk or the violations table. The range chart already
+      carries dispersion into those numbers, so a second dispersion signal would
+      double-count the same physical variation and move every published number.
+    definition_of_done: >
+      A known-answer test asserts the published constants for n = 4
+      (c4 = 0.9213, B6 = 2.088, B5 = 0) and for n = 2 (c4 = 0.7979, B6 = 2.068),
+      and one degenerate case (constant readings: every subgroup sd is 0, the
+      limits collapse onto the center, and nothing is flagged). A test asserts
+      that analyze_fridge() output for every demo fridge is IDENTICAL to what it
+      was before the chart existed - same badge, same RPN, same Cpk, same Ppk,
+      same units_at_risk, same violations rows - so the chart changed no number
+      anyone can already read. Rscript demo/show_numbers.R still prints DEMO OK
+      with the same fridge lines, Rscript -e "testthat::test_dir('tests')"
+      passes, and the Fridge Detail page shows the new chart beside the range
+      chart.
+    result: ""
+
+  - id: H-11
+    title: "Why these statistics: a plain-language section in README.md"
+    points: "documentation: a judge or a lab supervisor can say what each number means and why it is the one we chose"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["README.md"]
+    notes: >
+      A new section in README.md, text and tables only, no images. All eight
+      special-cause tests get equal depth: the pattern, the plain-English
+      meaning, and why that pattern is bad for blood storage specifically. The
+      section explains what the control limits are (center +/- 3 standard errors
+      of the subgroup mean) and therefore that a point past 3 SE is a point past
+      the limits - too far from the center to be ordinary wiggle - with the
+      consequences spelled out: the bag count in that fridge, the units at risk,
+      the badge. It covers why X-bar and range rather than a std-dev chart as the
+      primary pair, what the new s-chart adds, and what Cpk vs Ppk split means
+      (short-term capability against overall capability, and what the gap between
+      them is telling the supervisor). It ends with what the lab supervisor
+      actually does with each number. No formula is asserted that the code does
+      not implement; where the two would disagree, the code wins and this
+      section is corrected.
+    definition_of_done: >
+      README.md gains the section; every claim in it is checkable against a
+      function in app/R/ and a teammate can point at the line of code for each.
+      Rscript -e "testthat::test_dir('tests')" still passes (the source-hygiene
+      test reads README.md), and a teammate who did not write the code can read
+      the section and correctly say what a point past the limits means for one
+      named fridge in the demo.
+    result: ""
