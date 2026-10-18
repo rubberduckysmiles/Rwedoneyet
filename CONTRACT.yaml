@@ -226,17 +226,24 @@ tasks:
       carries dispersion into those numbers, so a second dispersion signal would
       double-count the same physical variation and move every published number.
     definition_of_done: >
-      A known-answer test asserts the published constants for n = 4
-      (c4 = 0.9213, B6 = 2.088, B5 = 0) and for n = 2 (c4 = 0.7979, B6 = 2.068),
-      and one degenerate case (constant readings: every subgroup sd is 0, the
-      limits collapse onto the center, and nothing is flagged). A test asserts
-      that analyze_fridge() output for every demo fridge is IDENTICAL to what it
-      was before the chart existed - same badge, same RPN, same Cpk, same Ppk,
-      same units_at_risk, same violations rows - so the chart changed no number
-      anyone can already read. Rscript demo/show_numbers.R still prints DEMO OK
-      with the same fridge lines, Rscript -e "testthat::test_dir('tests')"
-      passes, and the Fridge Detail page shows the new chart beside the range
-      chart.
+      A test computes c4, B5 and B6 from the closed form
+      c4 = sqrt(2/(n-1)) * Gamma(n/2) / Gamma((n-1)/2), B5 = max(0, c4 - 3*sqrt(1-c4^2)),
+      B6 = c4 + 3*sqrt(1-c4^2), and asserts the results against values derived
+      independently for n = 4 (c4 = 0.9213177, B6 = 2.0877494, B5 = 0) and n = 2
+      (c4 = 0.7978846, B6 = 2.6063154, B5 = 0); the test then cross-checks that
+      those computed values reproduce the standard textbook table to four
+      decimals, so the formula is confirmed rather than the table being the
+      source. A third case uses n = 25, where B5 is NOT 0 (computed 0.5589347),
+      which catches any implementation that hardcodes the lower limit to zero
+      instead of computing it. One degenerate case (constant readings: every
+      subgroup sd is 0, the limits collapse onto the center, and nothing is
+      flagged). A test asserts that analyze_fridge() output for every demo
+      fridge is IDENTICAL to what it was before the chart existed - same badge,
+      same RPN, same Cpk, same Ppk, same units_at_risk, same violations rows -
+      so the chart moved no number anyone can already read. Rscript
+      demo/show_numbers.R still prints DEMO OK with the same fridge lines,
+      Rscript -e "testthat::test_dir('tests')" passes, and the Fridge Detail
+      page shows the new chart beside the range chart.
     result: ""
 
   - id: H-11
@@ -261,6 +268,10 @@ tasks:
       actually does with each number. No formula is asserted that the code does
       not implement; where the two would disagree, the code wins and this
       section is corrected.
+      README.md must STAND ALONE. There are other collaborators and a judge who
+      may never open another file: everything load-bearing lives in README.md
+      itself, not a pointer to CODEBOOK.md, SPEC.md or data/README.md. Those
+      files deepen it; none of them is required to understand it.
     definition_of_done: >
       README.md gains the section; every claim in it is checkable against a
       function in app/R/ and a teammate can point at the line of code for each.
@@ -268,4 +279,117 @@ tasks:
       test reads README.md), and a teammate who did not write the code can read
       the section and correctly say what a point past the limits means for one
       named fridge in the demo.
+    result: ""
+
+  - id: H-12
+    title: "Every number on screen explained where the user meets it"
+    points: "documentation: a supervisor can say what any figure on any page means without asking anyone"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["SPEC.md", "app/app.R", "app/R/", "app/manifest.json", "README.md", "tests/"]
+    notes: >
+      Most numbers already carry a caption. Audit every value box, chart
+      annotation, table column and card field in app.R and close the gaps. The
+      worst one: RPN is a bare number on every fridge card (app.R line 498) and
+      the whole Overview sorts by it, yet nothing in the app says what RPN is,
+      what it is made of, or what counts as bad. Severity, occurrence and
+      urgency are computed in monitor.R and shown nowhere. Cpk, Ppk and the gap
+      have labels but no plain meaning. "Average Ppk" says "mean of the baseline
+      Ppk values" without saying what Ppk is. The rolling 24-hour Ppk chart has
+      no caption. The zone-lines checkbox says "1 and 2 sigma" without saying
+      what a zone is. The 10-second generator line is stated as a limit on three
+      screens with no source, and by team decision it is relabelled everywhere as
+      a threshold the team chose, which the manager should set for their own
+      site. Explanations go BOTH places by decision: a short line in the app
+      where the number is, and the full rationale in the README section from
+      H-11. No explanation may invent a formula the code does not implement.
+      README.md must STAND ALONE (see H-11): the on-screen captions and the
+      README section together must not require CODEBOOK.md to be understood.
+    definition_of_done: >
+      Walk every page of the app and every number on it; each has a caption in
+      plain words a supervisor can act on, including RPN and its three factors,
+      Cpk, Ppk, the gap, average Ppk, rolling Ppk, the zone lines, the histogram
+      spec lines and the generator threshold. The three factors sum to the RPN
+      shown, and a test asserts severity * occurrence * urgency equals the rpn
+      printed on the card for every demo fridge, so the caption cannot drift
+      from the number. The 10 s figure is labelled a team-chosen threshold
+      wherever it appears. Rscript -e "testthat::test_dir('tests')" passes,
+      app/manifest.json checksums are refreshed for the bundled files that
+      changed, and demo/show_numbers.R still prints DEMO OK with the same fridge
+      lines.
+    result: ""
+
+  - id: H-13
+    title: "CODEBOOK.md - every file, every variable, and the constants that were chosen"
+    points: "codebook: one file that says what each file and variable means, and which numbers are computed versus chosen"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["CODEBOOK.md", "data/README.md", "README.md"]
+    notes: >
+      data/README.md already codes every data file, column, unit and the four
+      fridge scenarios. What is missing is the code side: every file in the repo
+      and what it is for, every function in app/R/ in one line each, and every
+      computed variable named with what it means and which function produces it
+      - sigma_short, sigma_overall, center, se, lcl, ucl, d2, d3, c4, B5, B6,
+      cpk, ppk, gap, lag1, hours, rolling_ppk, severity, occurrence, urgency,
+      rpn, units_at_risk, status, and the violations columns. It must also carry
+      a table separating the two kinds of constant, because the team decided the
+      distinction matters: COMPUTED from the data or from first principles
+      (d2, d3, c4, B5, B6, sigma_short, sigma_overall, every limit and index)
+      versus CHOSEN and not derivable (the 1 to 6 C storage range, the 10 s
+      generator threshold, the 48-hour baseline length, the 25-subgroup minimum,
+      n = 4 readings per hour, the severity and urgency band edges in risk.R,
+      and the eight blood-type percentages that generated inventory.csv and so
+      cannot be recomputed from it). For each chosen one: where it lives in the
+      code, why the team picked it, and that a real deployment would take it
+      from site policy. Cross-link to data/README.md rather than repeating it.
+      README.md must STAND ALONE (see H-11): CODEBOOK.md deepens it and never
+      carries anything load-bearing that README.md does not also say.
+    definition_of_done: >
+      CODEBOOK.md exists at the repo root and names every file in the repo,
+      every function in app/R/, and every computed variable above, each with a
+      one-line meaning and the function that produces it. Its chosen-versus-computed
+      table lists every constant in the notes above and every one of them can be
+      found in the code at the file and line the table gives. The eight
+      blood-type percentages are documented as the generator's input, not as a
+      figure computed from inventory.csv, and no external donor-frequency source
+      is claimed. README.md links to CODEBOOK.md and data/README.md links back.
+      A teammate who did not write the code can answer "what is rpn", "where
+      does c4 come from" and "why is 6 the top of the spec" from CODEBOOK.md
+      alone, and each answer is checkable against a line of code.
+    result: ""
+
+  - id: H-14
+    title: "User and use case, stated one way everywhere"
+    points: "scope and user: the rubric's user-and-use-case line, consistent across SPEC, README and the app"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["SPEC.md", "README.md", "app/app.R", "data/README.md"]
+    notes: >
+      SPEC section 2 and README line 3 both name the user, but thinly, and the
+      repo has drifted between two names for them: SPEC and README say
+      "blood-bank operations manager" while the team has been saying "lab
+      supervisor". Settle on one term and use it in SPEC, README, CODEBOOK, the
+      app's own text and data/README.md. Then write the use case as the decision
+      the tool supports, who makes it, when, and what they do with the answer:
+      at shift change, the manager reads the Overview ranking and decides which
+      fridge to service, evacuate or leave alone before the next shift, so the
+      bags stay between 1 and 6 C. Say what the tool deliberately does NOT decide
+      for them - it does not dispose of blood, it does not clear a fridge as
+      safe, it ranks attention. Keep SPEC section 2 as the authoritative
+      version and make README and the app agree with it.
+      README.md must STAND ALONE (see H-11): the user and use case are stated
+      fully in README.md, not deferred to SPEC.md.
+    definition_of_done: >
+      One user name is used in SPEC section 2, the README's opening, CODEBOOK.md
+      and the app's own on-screen text, with no second term left anywhere; a
+      grep for the rejected term returns nothing outside git history. SPEC
+      section 2 states the user, the decision, when it is made, and what the
+      tool does not decide, in those four parts. README repeats it in the same
+      words and the app's Overview says who it is for. Rscript -e
+      "testthat::test_dir('tests')" still passes, including the source-hygiene
+      test that reads README.md.
     result: ""
