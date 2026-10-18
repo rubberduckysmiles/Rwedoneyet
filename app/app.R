@@ -99,7 +99,9 @@ sparkline_plot <- function(a) {
   if (nrow(d) == 0) return(empty_plot("no hourly data"))
   p <- plot_ly(d, x = ~time, y = ~mean, type = "scatter", mode = "lines",
                line = list(color = a$status_color, width = 2),
-               text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text")
+               text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text") %>%
+    add_lines(x = d$time, y = rep(mean(d$mean, na.rm = TRUE), nrow(d)),
+              line = list(color = "black", dash = "dot", width = 1), hoverinfo = "skip", showlegend = FALSE)
   shapes <- list()
   if (a$has_limits) {
     lim <- a$baseline$limits$xbar
