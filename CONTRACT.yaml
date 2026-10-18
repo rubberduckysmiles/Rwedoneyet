@@ -419,3 +419,46 @@ tasks:
       "testthat::test_dir('tests')" still passes, including the source-hygiene
       test that reads README.md.
     result: ""
+
+  - id: H-15
+    title: "Generator statistics and plain-language captions on the Capability tab"
+    points: "tool depth: the Capability tab explains Cpk, Ppk and the gap in words, and carries the generator's own statistics, so the backup-power story is visible where capability is judged"
+    status: in_progress
+    owner: "agent"
+    started_at: "2026-10-18"
+    owns: ["app/app.R", "app/R/", "app/manifest.json", "tests/", "README.md"]
+    notes: >
+      Two gaps on one page. First, the Capability tab shows three bare value
+      boxes labelled "Cpk (short-term sigma)", "Ppk (overall sigma)" and
+      "Gap (Cpk minus Ppk)" - names that describe the formula and not the
+      decision. Each gains a plain caption a manager can act on: Cpk is the
+      room left if the fridge holds the way it has been holding hour to hour;
+      Ppk answers the same question from the whole baseline, drift included;
+      the gap is the stability signal, near zero meaning stable and clearly
+      positive meaning it holds temperature within an hour but wanders between
+      hours. Second, the Capability tab carries no generator numbers at all,
+      though the generator is what keeps the fridges cold through a mains
+      outage. Add a generator statistics strip built ONLY from what
+      generator_analysis() already returns - last transfer, typical transfer
+      (the I-chart center), the upper control limit, and how many tests fell
+      beyond the limits - plus a short panel saying what a generator does for
+      the fridges and why transfer time is the number that matters. No new
+      formula: if a figure needs a computation the app does not have, it does
+      not go on the page. By the earlier team decision the 10 second figure is
+      relabelled everywhere it appears as a threshold the team chose, not a
+      limit, and the two strings that still say "limit" are corrected here.
+      Explanations go BOTH places: a short line in the app and the full
+      rationale in README.md. README.md must STAND ALONE (see H-11).
+    definition_of_done: >
+      The Capability tab shows a plain caption under Cpk, under Ppk and under
+      the gap, and a generator strip whose every value traces to a field of
+      generator_analysis(); a test asserts each displayed statistic equals what
+      that function returns for the demo log, and asserts severity *
+      occurrence * urgency still equals the rpn on every demo fridge so no
+      published number moved. A test also asserts no string in app/app.R calls
+      the 10 second figure a limit. Rscript demo/show_numbers.R still prints
+      DEMO OK with the same fridge lines, Rscript -e "testthat::test_dir('tests')"
+      passes, app/manifest.json checksums are refreshed by hand with the
+      platform still 4.5.2, and README.md explains the generator statistics in
+      its own section without pointing at another file to be understood.
+    result: ""
