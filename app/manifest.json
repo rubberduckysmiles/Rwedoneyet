@@ -2030,13 +2030,13 @@
   },
   "files": {
     "app.R": {
-      "checksum": "738e57924875d856e095ba413c26a4d5"
+      "checksum": "3adf109034911dfa76a5c6d409348726"
     },
     "data/generator_log.csv": {
       "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
     },
     "data/inventory.csv": {
-      "checksum": "69edbda7b25dc02cd4c49038e158ee81"
+      "checksum": "56d90cf1c2fdcca971bb302729ffcabe"
     },
     "data/readings.csv": {
       "checksum": "3c61bf17f4c1c864be19d1dfdf74fb45"
@@ -2057,7 +2057,7 @@
       "checksum": "7fcc58d6eadbaf411d04e21d2f845eed"
     },
     "R/monitor.R": {
-      "checksum": "bee20cf8485f963681d3fcbf10fce4be"
+      "checksum": "37d293787d9ff4492f892d0a4a8882b4"
     },
     "R/range_constants.R": {
       "checksum": "8fa6c3f32bea9066d6bac03f0c517ff8"

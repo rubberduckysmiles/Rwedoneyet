@@ -26,7 +26,7 @@ cannot measure costs points.
 | Input | Type and units | Where the user gets it |
 |---|---|---|
 | `readings.csv`: fridge_id, timestamp, temp_c, door_open, on_generator. One row every 15 minutes. | temp_c in °C. door_open and on_generator are 1 or 0. | the fridge logger |
-| `inventory.csv`: fridge_id, blood_units | count of red-cell bags in that fridge | the inventory the manager already keeps |
+| `inventory.csv`: fridge_id, blood_type, blood_units | count of red-cell bags of each ABO/Rh type in that fridge, one row per fridge per type | the inventory the manager already keeps |
 | `generator_log.csv` (optional): date, transfer_time_sec | seconds from power loss to generator load | the generator transfer test |
 
 ## 4. The statistics, and why (rubric: valid QC analysis 25)
@@ -55,13 +55,13 @@ Fixed for every team:
 - A small tool that runs beats a large tool that does not.
 
 ## 6. Outputs
-- **What the user sees:** ColdChain Monitor. Overview shows fridges needing action, blood units at risk, average Ppk, and the last generator transfer, then fridge cards sorted by risk priority number. Fridge Detail shows an X-bar chart over a range chart, with the baseline shaded and flagged hours marked. Capability shows Cpk, Ppk, the gap, a histogram with lines at 1 °C, 3.5 °C, and 6 °C, a rolling 24-hour Ppk, and one sentence: "capable and stable", "inside the spec width, but not stable", or "not capable". How to read the badge: red means act this shift, amber means watch, green means leave it.
+- **What the user sees:** ColdChain Monitor. Overview shows fridges needing action, blood units at risk, average Ppk, and the last generator transfer, then fridge cards sorted by risk priority number. Fridge Detail shows an X-bar chart over a range chart, with the baseline shaded and flagged hours marked, then the blood types held in that fridge with each type's at-risk bags marked. Capability shows Cpk, Ppk, the gap, a histogram with lines at 1 °C, 3.5 °C, and 6 °C, a rolling 24-hour Ppk, and one sentence: "capable and stable", "inside the spec width, but not stable", or "not capable". How to read the badge: red means act this shift, amber means watch, green means leave it.
 
 ## 7. Test datasets and codebook (rubric: demo 10, datasets 5, codebook 5)
 2-3 small CSVs in `data/`, invented but shaped like real field data, each showing one behavior.
 `data/README.md` is the codebook: every file, every column with units, and what it would take to
 collect this data for real.
-- **Datasets:** `readings.csv` (six fridges, one reading every 15 minutes: healthy, drifting compressor, door-open spikes, blackout with a slow generator, flatlined sensor, and a second healthy fridge with a normal defrost cycle), `inventory.csv` (bags in each fridge), `generator_log.csv` (transfer time in seconds). The 10-hour hand-check rows live in the tests, not as a fourth CSV.
+- **Datasets:** `readings.csv` (six fridges, one reading every 15 minutes: healthy, drifting compressor, door-open spikes, blackout with a slow generator, flatlined sensor, and a second healthy fridge with a normal defrost cycle), `inventory.csv` (bags in each fridge, split by blood type: the per-fridge totals are the same as they ever were, and blood type is display only), `generator_log.csv` (transfer time in seconds). The 10-hour hand-check rows live in the tests, not as a fourth CSV.
 
 ## 8. Documentation and reproducibility (rubric: docs 10, public repo 5)
 - `README.md` says what the tool does, for whom, every input and parameter, how to run it in one

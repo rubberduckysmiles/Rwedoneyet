@@ -51,7 +51,7 @@ Five pages: Overview, Fridge Detail, Capability, Generator, and Data.
 | Page | What it shows |
 |---|---|
 | Overview | Fridges needing action, blood units at risk, average Ppk, and the last generator transfer. Fridge cards are sorted by risk priority number. A note says the limits are frozen from the first 48 hours. |
-| Fridge Detail | An X-bar chart over a range chart. The baseline is shaded. A flagged hour is marked, and the hover text is the test's plain-English meaning. |
+| Fridge Detail | An X-bar chart over a range chart. The baseline is shaded. A flagged hour is marked, and the hover text is the test's plain-English meaning. Below them, the blood types in that fridge, with the at-risk bags of each type marked. |
 | Capability | Cpk, Ppk, the gap, a histogram with lines at 1 °C, 3.5 °C, and 6 °C, a rolling 24-hour Ppk, and one sentence. |
 | Generator | Individuals and moving-range charts for transfer time, with a line at 10 seconds. |
 | Data | The three demo files, or three files the manager uploads, plus a button that reloads the demo. |
@@ -90,7 +90,7 @@ Only three files. All of the files in `data/` are synthetic. Seed 5300. Regenera
 | File | Columns | What a technician records |
 |---|---|---|
 | `readings.csv` | `fridge_id`, `timestamp`, `temp_c` (°C), `door_open` (1 or 0), `on_generator` (1 or 0) | A probe in a glycerol bottle, every 15 minutes, plus the door contact and the power-monitor contact. |
-| `inventory.csv` | `fridge_id`, `blood_units` | The bag count already on the shift sheet. |
+| `inventory.csv` | `fridge_id`, `blood_type`, `blood_units` | The bag count and its ABO/Rh group from the shift sheet, one row per fridge per type. Totals per fridge are unchanged by the split. |
 | `generator_log.csv` | `date`, `transfer_time_sec` | A stopwatch at the generator transfer test. Optional. |
 
 The demo has six fridges, F01 through F06, from 2026-10-01 00:00:00 through 2026-10-07 23:45:00. Timestamps have no time zone. The planted stories, and how to read each number, are in [demo/README.md](demo/README.md).
@@ -140,6 +140,7 @@ Minutes outside 1–6 °C in the last 24 hours are shown on the fridge. They are
 | `analyze_fridge(...)` | One fridge's readings and its bag count. | Joins the functions above into the badge, the sentence, the hours, and the risk priority number. It does not add a new formula. |
 | `analyze_all(readings, inventory)` | Both data frames. | One row per fridge, sorted by risk priority number, highest first. |
 | `overview_summary(analyses, generator)` | The fridge rows and the generator log. | Needing action, units at risk, average Ppk, and the last transfer. |
+| `bloodtype_table(inventory, fridge_id, units_at_risk)` | The inventory, one fridge's ID, and that fridge's at-risk bag count. | One row per blood type in that fridge: bag count, share of the fridge, and at-risk bags split by that share. Zero rows for a fridge with no inventory. No new formula. |
 | `generator_analysis(generator)` | The generator log. | The I-MR limits plus the series to plot. |
 
 The eight tests, in order:

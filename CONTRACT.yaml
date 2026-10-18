@@ -155,3 +155,50 @@ tasks:
       testme script and the H-03 tests both pass with no extra steps; git
       grep -i "api_key" finds no real key; the Devpost entry links the repo.
     result: ""
+
+  - id: H-09
+    title: Blood type per bag in the inventory, and a blood-type section on Fridge Detail
+    points: "scope and demo: one more input the manager already keeps, shown where the decision is made"
+    status: done
+    owner: "agent + Keep It Cool"
+    started_at: "2026-10-18 12:00"
+    owns: ["SPEC.md", "data/", "app/R/", "app/app.R", "app/data/", "tests/", "demo/", "README.md"]
+    notes: >
+      Agreed design: inventory.csv becomes one row per fridge per blood type
+      (fridge_id, blood_type, blood_units), drawn multinomially from the
+      standard US donor distribution (O+ 38, A+ 32, B+ 9, AB+ 3, O- 7, A- 6,
+      B- 2, AB- 1 percent) so each fridge's total never changes and every
+      existing RPN, badge and units-at-risk number stays as printed. Blood
+      type is DISPLAY ONLY: it must not touch Cpk, Ppk, limits or RPN. The
+      section lives on Fridge Detail and also shows how many at-risk bags are
+      each type. The blood-type draws get their own re-seed in make_data.R so
+      readings.csv and generator_log.csv stay byte-identical.
+    definition_of_done: >
+      data/make_data.R regenerates data/ with data/inventory.csv holding
+      fridge_id, blood_type, blood_units, and data/README.md defines
+      blood_type with units and cites the distribution source; Rscript
+      demo/show_numbers.R still prints DEMO OK with the same fridge numbers as
+      before; Rscript -e "testthat::test_dir('tests')" passes, including a new
+      test file that checks the per-fridge type counts sum to that fridge's
+      old total and that a zero-bag fridge contributes no rows; the Fridge
+      Detail page shows the blood-type breakdown for the selected fridge.
+    result: >-
+      Verified. Rscript data/make_data.R printed "Wrote data/readings.csv,
+      data/inventory.csv, data/generator_log.csv (seed 5300, blood types 5301)";
+      inventory.csv now holds 40 rows of fridge_id, blood_type, blood_units, and
+      MD5 of readings.csv and generator_log.csv are unchanged (8b566af6... and
+      0d287fc2...), so no statistic moved. data/README.md documents blood_type
+      with its units, the eight US donor frequencies, and their 98%-not-100
+      renormalization. Rscript demo/show_numbers.R printed DEMO OK with every
+      fridge line byte-identical to before (bags 180/220/55/40/8/12, at_risk
+      180/0/55/40/8/0, RPN 900/100/54/50/18/15, units at risk 283) plus a new
+      blood-type line per fridge. Rscript -e "testthat::test_dir('tests')"
+      printed [ FAIL 0 | WARN 0 | SKIP 0 | PASS 533 ]: 519 before, plus 33 in
+      test-bloodtypes.R, plus 10 in test-app_bloodtype_section.R, plus 4 from
+      the hygiene test (it makes four expectations per .R file and one file was
+      added). The new tests check the per-fridge types sum to that fridge's old
+      total and that a zero-bag fridge contributes no rows. The Fridge Detail
+      card is filled and asserted by shiny::testServer, which reads the real
+      chart JSON and note back out. app/manifest.json re-checksummed for the
+      three changed bundled files; platform stays 4.5.2 so the deploy does not
+      move off the R version Connect already has.

@@ -1,8 +1,8 @@
 # Codebook for `data/`
 
 **All data in this folder are synthetic.** They were invented by a script, not measured on any real
-refrigerator, bag of blood, or generator. Seed 5300. Regenerate every CSV, byte for byte, from the repo
-root with:
+refrigerator, bag of blood, or generator. Seed 5300 (blood types, 5301). Regenerate every CSV, byte for
+byte, from the repo root with:
 
 ```
 Rscript data/make_data.R
@@ -20,9 +20,9 @@ Safe storage range for red blood cells: **1 to 6 °C**.
 
 | File | Rows | What it is |
 |---|---|---|
-| `make_data.R` | n/a | The generator script (R, `set.seed(5300)`). |
+| `make_data.R` | n/a | The generator script (R, `set.seed(5300)`, blood types `set.seed(5301)`). |
 | `readings.csv` | 4032 (6 fridges x 672) + 1 header | One temperature reading every 15 minutes per fridge, 2026-10-01 00:00:00 through 2026-10-07 23:45:00. |
-| `inventory.csv` | 6 + 1 header | How many red-cell bags are in each fridge. |
+| `inventory.csv` | 40 + 1 header | How many red-cell bags are in each fridge, one row per fridge per blood type. |
 | `generator_log.csv` | 30 + 1 header | One backup-generator transfer test per day, 2026-09-07 through 2026-10-06. |
 
 ## `readings.csv`
@@ -40,12 +40,32 @@ clock time with no time zone.
 
 ## `inventory.csv`
 
+One row per fridge **per blood type held**: a fridge with bags of three types has three rows. The rows
+for one fridge add up to that fridge's total, and those totals are unchanged from the first version of
+this dataset (F01 = 12, F02 = 180, F03 = 40, F04 = 220, F05 = 8, F06 = 55), so every risk priority
+number, badge and bag-at-risk figure computed from them is the same either way.
+
 | Column | Unit | Allowed values | How a technician would record it for real |
 |---|---|---|---|
-| `fridge_id` | label | `F01` to `F06`, one row each | Same asset tag as in `readings.csv`. |
-| `blood_units` | count of red-cell bags | Whole number, 0 or more | Counted by hand from the shift inventory sheet, bags physically in that fridge at the start of the shift. |
+| `fridge_id` | label | `F01` to `F06` | Same asset tag as in `readings.csv`. |
+| `blood_type` | ABO group plus Rh factor | `O+`, `A+`, `B+`, `AB+`, `O-`, `A-`, `B-`, `AB-` | Printed on the bag label and on the blood bank's inventory sheet, one line per group in the fridge. |
+| `blood_units` | count of red-cell bags of that type | Whole number, 1 or more. Types with no bags on the shelf get no row. | Counted by hand from the shift inventory sheet, bags physically in that fridge at the start of the shift. |
 
-Values: F01 = 12, F02 = 180, F03 = 40, F04 = 220, F05 = 8, F06 = 55. These are bag counts only.
+**How the types were drawn.** The fridge totals are fixed, and each total is split across the eight
+types with `rmultinom()`, using the widely reported US red-cell antigen (ABO/Rh) frequencies:
+O+ 38%, A+ 32%, B+ 9%, O- 7%, A- 6%, AB+ 3%, B- 2%, AB- 1%. Those percentages sum to 98, not 100: the
+remainder is rare subtypes this eight-type table does not name. `rmultinom()` renormalizes, so the
+missing 2% is spread across the eight by weight. The draws use their own seed, 5301, and run after
+every other draw in `make_data.R`, so `readings.csv` and `generator_log.csv` stay byte for byte
+identical to the version without blood types.
+
+The distribution is the population-level donor figure, cited for the US donor base (AABB / NIH NHLBI
+tables as commonly reported). It is a synthetic draw against those probabilities, not a real blood
+bank's stock: a real fridge would be skewed by whatever the hospital was given that week.
+
+Blood type is **display only** in this tool. It does not enter the capability indices, the control
+limits, the severity score, or the risk priority number. Its one risk-related use is showing which
+bags inside an at-risk fridge are of each type, split by that type's own share of the fridge.
 
 ## `generator_log.csv`
 

@@ -231,6 +231,34 @@ rolling_plot <- function(a, dark) {
     themed(dark)
 }
 
+# Bags by blood type for one fridge. Display only: the counts come from the inventory
+# sheet and the at-risk split from bloodtype_table(), which divides by the fridge's own
+# total. The badge color marks the at-risk bags, so the chart never invents a new color
+# meaning. Sorted commonest first, which bloodtype_table() already does.
+bloodtype_plot <- function(bt, status_color, dark) {
+  if (nrow(bt) == 0) {
+    return(empty_plot("No inventory rows for this fridge.<br>Add blood_type to the inventory file.", dark))
+  }
+  at_risk <- bt$units_at_risk
+  safe <- bt$blood_units - at_risk
+  plot_ly() %>%
+    add_bars(x = ~safe, y = ~bt$blood_type, orientation = "h", name = "Within spec",
+             marker = list(color = "#9AA0A6"),
+             text = ~sprintf("%d bags", round(safe)), textposition = "inside",
+             hovertemplate = "%{y}: %{x} bags within spec<extra></extra>") %>%
+    add_bars(x = ~at_risk, y = ~bt$blood_type, orientation = "h", name = "At risk",
+             marker = list(color = status_color),
+             text = ~ifelse(at_risk > 0, sprintf("%d at risk", round(at_risk)), ""),
+             textposition = "inside",
+             hovertemplate = "%{y}: %{x} bags at risk<extra></extra>") %>%
+    layout(barmode = "stack",
+           xaxis = list(title = "Red-cell bags", gridcolor = if (isTRUE(dark)) "rgba(255,255,255,0.12)" else "rgba(0,0,0,0.10)"),
+           yaxis = list(title = "", categoryorder = "total ascending"),
+           legend = list(orientation = "h", y = -0.25),
+           margin = list(t = 10)) %>%
+    config(displayModeBar = FALSE)
+}
+
 generator_plots <- function(g, dark) {
   lim <- g$limits
   idx <- seq_len(g$n)
@@ -301,6 +329,12 @@ ui <- bslib::page_navbar(
       ),
       bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
       bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
+      bslib::card(
+        bslib::card_header("Blood types in this fridge"),
+        uiOutput("bloodtype_note"),
+        plotlyOutput("bloodtype_chart", height = "260px"),
+        full_screen = TRUE
+      ),
       bslib::card(bslib::card_header("Violations"), DT::DTOutput("violations_table"))
     )
   ),
@@ -328,7 +362,7 @@ ui <- bslib::page_navbar(
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, md = 4),
       fileInput("up_readings", "Readings (fridge_id, timestamp, temp_c, door_open, on_generator)", accept = ".csv"),
-      fileInput("up_inventory", "Inventory (fridge_id, blood_units)", accept = ".csv"),
+      fileInput("up_inventory", "Inventory (fridge_id, blood_type, blood_units)", accept = ".csv"),
       fileInput("up_generator", "Generator log (date, transfer_time_sec)", accept = ".csv")
     ),
     actionButton("load_demo", "Load demo data", class = "btn-primary mb-3"),
@@ -480,6 +514,35 @@ server <- function(input, output, session) {
   })
 
   # ---- Fridge Detail
+  # Blood types for the selected fridge, split into at-risk and within-spec bags.
+  bloodtype_data <- reactive({
+    a <- detail()
+    bloodtype_table(rv$inventory, a$fridge_id, a$units_at_risk)
+  })
+
+  output$bloodtype_note <- renderUI({
+    a <- detail()
+    bt <- bloodtype_data()
+    if (nrow(bt) == 0) {
+      return(tags$p(class = "text-muted small mb-0",
+                    "No blood types on file for this fridge. The inventory file carries one row per fridge per type (fridge_id, blood_type, blood_units)."))
+    }
+    total <- sum(bt$blood_units)
+    at_risk <- sum(bt$units_at_risk)
+    risk_text <- if (at_risk > 0) {
+      sprintf("%d of %d bags are at risk, because %s is %s.", round(at_risk), round(total),
+              a$fridge_id, sub("^[a-z]+: ", "", a$status_label))
+    } else {
+      sprintf("All %d bags are inside the spec right now.", round(total))
+    }
+    tags$p(class = "text-muted small mb-0", risk_text)
+  })
+
+  output$bloodtype_chart <- renderPlotly({
+    a <- detail()
+    bloodtype_plot(bloodtype_data(), a$status_color, dark())
+  })
+
   output$xbar_chart <- renderPlotly({
     a <- detail()
     xbar_plot(a, visible_rows(a, input$dates), input$zone_lines, dark())

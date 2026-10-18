@@ -45,6 +45,22 @@ What you see: those counts become the severity part of the risk priority number.
 
 How to read this: a high bag count raises the rank only together with a live signal. Bags at risk are 283, the sum of the bags in fridges that are out of range now or flagged in the last 24 hours. F04's 220 bags are not in that sum, because its latest temperature is back inside 1–6 °C.
 
+The file has one row per fridge per blood type, drawn from the US donor frequencies in `data/README.md`. The rows for a fridge add up to its total, so every number above is the same as it was before blood types existed.
+
+The script also prints one line per fridge:
+
+```text
+Blood types by fridge (display only: no badge, index or RPN uses them)
+  F02  180 bags: O+=75 (at risk), A+=58 (at risk), O-=14 (at risk), B+=11 (at risk), A-=8 (at risk), AB+=8 (at risk), B-=4 (at risk), AB-=2 (at risk)
+  F04  220 bags: O+=83, A+=79, B+=19, O-=17, A-=11, AB+=6, AB-=3, B-=2
+  F06  55 bags: A+=20 (at risk), O+=17 (at risk), B+=7 (at risk), O-=5 (at risk), AB+=3 (at risk), A-=2 (at risk), AB-=1 (at risk)
+  F03  40 bags: O+=15 (at risk), A+=12 (at risk), B-=3 (at risk), O-=3 (at risk), AB+=2 (at risk), AB-=2 (at risk), B+=2 (at risk), A-=1 (at risk)
+  F05  8 bags: A+=3 (at risk), AB+=2 (at risk), AB-=1 (at risk), B+=1 (at risk), O+=1 (at risk)
+  F01  12 bags: O+=6, A+=4, A-=1, O-=1
+```
+
+How to read this: "(at risk)" appears only for fridges whose bags are in the units-at-risk total, 283. F02 is already out of range, so all 180 of its bags are marked. F04 is red but back inside 1–6 °C, so none of its 220 are. F01 is amber with no live signal, so none of its 12 are. Open Fridge Detail in the app to see the same breakdown as a chart, with the at-risk bags in the badge color.
+
 ## generator_log.csv
 
 Command: the same script. It prints:

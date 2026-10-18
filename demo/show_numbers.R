@@ -21,6 +21,14 @@ for (one in analyses) {
     one$ppk, one$cpk, one$hours_text, one$rpn, one$capable_sentence
   ))
 }
+cat("\nBlood types by fridge (display only: no badge, index or RPN uses them)\n")
+for (one in analyses) {
+  bt <- bloodtype_table(loaded$inventory, one$fridge_id, one$units_at_risk)
+  parts <- sprintf("%s=%d%s", bt$blood_type, round(bt$blood_units),
+                   ifelse(bt$units_at_risk > 0, " (at risk)", ""))
+  cat(sprintf("  %s  %d bags: %s\n", one$fridge_id, sum(bt$blood_units),
+              paste(parts, collapse = ", ")))
+}
 cat("\nGenerator individuals chart\n")
 cat(sprintf(
   "  n=%d  center=%.3f  lower=%.3f  upper=%.3f  2026-10-06 transfer=%s seconds\n",

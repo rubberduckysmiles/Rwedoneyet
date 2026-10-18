@@ -18,6 +18,7 @@ STATUS_LABELS <- c(
 )
 
 READINGS_COLUMNS <- c("fridge_id", "timestamp", "temp_c", "door_open", "on_generator")
+# blood_type is optional so a manager's own totals-only sheet still loads; the demo file has it.
 INVENTORY_COLUMNS <- c("fridge_id", "blood_units")
 GENERATOR_COLUMNS <- c("date", "transfer_time_sec")
 
@@ -66,6 +67,10 @@ prepare_readings <- function(df) {
   out
 }
 
+# Inventory: fridge_id and blood_units are required. blood_type is kept when present
+# (one row per fridge per type); when it is missing the file is totals-only and the
+# breakdown screens simply have nothing to draw. Rows with a blank type label are kept
+# but labelled "untyped" so no bag is ever dropped from a count.
 prepare_inventory <- function(df) {
   check_columns(df, INVENTORY_COLUMNS, "inventory file")
   out <- data.frame(
@@ -73,7 +78,15 @@ prepare_inventory <- function(df) {
     blood_units = suppressWarnings(as.numeric(df$blood_units)),
     stringsAsFactors = FALSE
   )
+  out$blood_type <- if ("blood_type" %in% names(df)) {
+    bt <- trimws(as.character(df$blood_type))
+    bt[is.na(df$blood_type) | !nzchar(bt)] <- "untyped"
+    bt
+  } else {
+    rep("untyped", nrow(out))
+  }
   out <- out[!is.na(out$fridge_id) & !is.na(out$blood_units) & out$blood_units >= 0, , drop = FALSE]
+  out <- out[, c("fridge_id", "blood_type", "blood_units")]
   rownames(out) <- NULL
   out
 }
@@ -297,6 +310,8 @@ analyze_fridge <- function(fridge_id, readings, blood_units = 0, subgroup_n = 4,
 # ---- All fridges ---------------------------------------------------------------------------------
 
 # Returns a list of analyses, one per fridge, sorted by RPN (highest first).
+# The inventory may hold one row per fridge per blood type, so a fridge's bag
+# count is the SUM of its rows, never the first row alone.
 analyze_all <- function(readings, inventory = NULL) {
   if (is.null(readings) || nrow(readings) == 0) return(list())
   ids <- sort(unique(readings$fridge_id))
@@ -304,7 +319,7 @@ analyze_all <- function(readings, inventory = NULL) {
     units <- 0
     if (!is.null(inventory)) {
       hit <- inventory$blood_units[inventory$fridge_id == id]
-      if (length(hit) > 0) units <- hit[1]
+      if (length(hit) > 0) units <- sum(hit)
     }
     analyze_fridge(id, readings[readings$fridge_id == id, , drop = FALSE], units)
   })
@@ -325,6 +340,48 @@ overview_summary <- function(analyses, generator = NULL) {
     average_ppk = if (any(!is.na(ppks))) mean(ppks, na.rm = TRUE) else NA_real_,
     last_transfer = last_transfer
   )
+}
+
+# ---- Blood types -------------------------------------------------------------------------------
+
+# One row per blood type held in one fridge: how many bags, what share of that fridge's
+# stock, and how many of those bags are at risk. No new formula: it groups counts that
+# are already in the inventory and divides by the fridge's own total.
+# Risk is judged PER FRIDGE (analyze_fridge flags the whole fridge or none of it), so a
+# type's at-risk bags are that type's own count when the fridge is at risk, and 0 when it
+# is not. Types are sorted by bag count, highest first. A fridge with no inventory rows
+# returns zero rows, never an error.
+bloodtype_table <- function(inventory, fridge_id, units_at_risk = 0) {
+  empty <- data.frame(blood_type = character(0), blood_units = numeric(0),
+                      share = numeric(0), units_at_risk = numeric(0),
+                      stringsAsFactors = FALSE)
+  if (is.null(inventory) || nrow(inventory) == 0 || length(fridge_id) != 1 || is.na(fridge_id)) {
+    return(empty)
+  }
+  rows <- inventory[inventory$fridge_id == fridge_id, , drop = FALSE]
+  if (nrow(rows) == 0) return(empty)
+
+  # One sheet could name the same type twice; add those rows together.
+  # method = "radix" sorts by byte order, not the machine's collation, so a tie
+  # between AB+ and AB- comes out the same on every computer.
+  types <- sort(unique(rows$blood_type), method = "radix")
+  counts <- vapply(types, function(t) sum(rows$blood_units[rows$blood_type == t]), numeric(1))
+  keep <- counts > 0
+  types <- types[keep]
+  counts <- counts[keep]
+  if (length(counts) == 0) return(empty)
+
+  total <- sum(counts)
+  if (length(units_at_risk) != 1 || is.na(units_at_risk) || units_at_risk < 0) units_at_risk <- 0
+  # The whole fridge is at risk or none of it is, so at-risk bags split across types in
+  # proportion to their own counts. For the 0 or all values analyze_fridge produces,
+  # this is exactly 0 or exactly the type's count.
+  at_risk <- counts * min(1, units_at_risk / total)
+
+  out <- data.frame(blood_type = types, blood_units = counts,
+                    share = counts / total, units_at_risk = at_risk,
+                    stringsAsFactors = FALSE)
+  out[order(-out$blood_units, out$blood_type, method = "radix"), , drop = FALSE]
 }
 
 # ---- Generator -----------------------------------------------------------------------------------
