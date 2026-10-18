@@ -258,10 +258,10 @@ tasks:
 
   - id: H-11
     title: "Why these statistics: a plain-language section in README.md"
-    points: "documentation: a judge or a lab supervisor can say what each number means and why it is the one we chose"
-    status: todo
-    owner: ""
-    started_at: ""
+    points: "documentation: a judge or a blood-bank operations manager can say what each number means and why it is the one we chose"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-18"
     owns: ["README.md"]
     notes: >
       A new section in README.md, text and tables only, no images. All eight
@@ -289,7 +289,23 @@ tasks:
       test reads README.md), and a teammate who did not write the code can read
       the section and correctly say what a point past the limits means for one
       named fridge in the demo.
-    result: ""
+    result: "README section 7 'Why these statistics' added, text and tables only.
+      Control limits explained as center +/- 3 SE of the subgroup mean, with the
+      three consequences (red badge, units at risk, violations row) named against
+      the code that produces them. All eight tests given equal depth: pattern,
+      plain meaning, and why that pattern harms stored red cells. Explains why
+      X-bar + range is the primary pair and what the s-chart adds, including why
+      the s-chart is display only. Cpk/Ppk/gap split explained as short-term
+      against overall capability. Closes with a 14-row table of what the
+      operations manager does with each number, plus a worked example on F02.
+      Every number in that example verified against the code: severity 9 (180
+      bags, 151-200 band) x occurrence 10 x urgency 10 = 900, with Cpk 6.151,
+      Ppk 5.864, 'already out' and the capability sentence all matching, 12/12
+      assertions TRUE. Occurrence and urgency scales reproduced exactly from
+      worst_occurrence and urgency_score. Fixed two descriptions H-10 made
+      stale: section 3's Fridge Detail row and section 6's test-coverage line.
+      Section renumbering verified - no cross-reference broke, section 6 keeps
+      its number. Suite 754 passing 0 failing."
 
   - id: H-12
     title: "Every number on screen explained where the user meets it"
