@@ -164,7 +164,8 @@ test_that("the Capability tab shows the generator statistics and what a generato
                  info = "say what a generator does for the fridges")
 
     # The statistics, each equal to what generator_analysis computes.
-    g <- generator_analysis(rv_generator(app_env))
+    # Inside testServer the server's own reactives are in scope, so gen() works.
+    g <- gen()
     if (!is.null(g)) {
       s <- generator_stats(g)
       expect_match(html, sprintf("%.1f", s$last), fixed = TRUE,
