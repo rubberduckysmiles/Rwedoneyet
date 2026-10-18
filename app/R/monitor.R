@@ -175,6 +175,16 @@ analyze_fridge <- function(fridge_id, readings, blood_units = 0, subgroup_n = 4,
     tests <- lapply(1:8, function(k) list(indices = integer(0), meaning = ""))
   }
 
+  # Test 1 on the subgroup standard deviations. DISPLAY ONLY: these flags are
+  # drawn on their own chart and deliberately feed nothing else - not the
+  # violations table, not the badge, not the RPN, not units_at_risk.
+  sd_test <- list(indices = integer(0), meaning = "")
+  sd_flagged <- rep(FALSE, n_sub)
+  if (has_limits && n_sub > 0) {
+    sd_test <- special_cause_test_1(st$sd, fb$limits$sd$lcl, fb$limits$sd$ucl)
+    sd_flagged[sd_test$indices] <- TRUE
+  }
+
   # Table of every flag, with whether it falls after the baseline (monitored).
   rows <- list()
   for (k in 1:8) {
@@ -287,6 +297,8 @@ analyze_fridge <- function(fridge_id, readings, blood_units = 0, subgroup_n = 4,
     range_test = range_test,
     xbar_min_test = xbar_min_test,
     range_flagged = range_flagged,
+    sd_flagged = sd_flagged,
+    sd_test = sd_test,
     violations = violations,
     forecast = forecast,
     hours = hours,

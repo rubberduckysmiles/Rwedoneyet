@@ -2030,7 +2030,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "3adf109034911dfa76a5c6d409348726"
+      "checksum": "485dce55fcb8d7b1b3b5ca5ae2bf01a0"
     },
     "data/generator_log.csv": {
       "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
@@ -2045,7 +2045,7 @@
       "checksum": "02771dddcfcdf1cfb1b6c50567d07650"
     },
     "R/baseline.R": {
-      "checksum": "0b3cdd5ff1dfb5ec6a3373deab611dea"
+      "checksum": "cb1f483563b156981ace86034ada2078"
     },
     "R/forecast.R": {
       "checksum": "1e276d5a7cf5c3515b7fd97ac908ad83"
@@ -2054,16 +2054,19 @@
       "checksum": "c88c59fa426fc6fd53e45daf44ca6ba6"
     },
     "R/limits.R": {
-      "checksum": "7fcc58d6eadbaf411d04e21d2f845eed"
+      "checksum": "d5f315adf0ac8b2dd01255c206ec19ff"
     },
     "R/monitor.R": {
-      "checksum": "37d293787d9ff4492f892d0a4a8882b4"
+      "checksum": "b423bd4cb672562d8a3c8e9666959428"
     },
     "R/range_constants.R": {
       "checksum": "8fa6c3f32bea9066d6bac03f0c517ff8"
     },
     "R/risk.R": {
       "checksum": "f5248c87add56d9ebd0919fdae8a0dfe"
+    },
+    "R/sd_constants.R": {
+      "checksum": "bf8e24151081c45a37c6d96fddb18bbe"
     },
     "R/special_cause_tests.R": {
       "checksum": "e1976cc3c97cf79fdf6a2a3ba5354c59"

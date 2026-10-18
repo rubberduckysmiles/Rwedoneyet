@@ -206,9 +206,9 @@ tasks:
   - id: H-10
     title: Standard deviation (s) control chart on Fridge Detail
     points: "tool depth: a third control chart, so dispersion has its own chart instead of being implied by the range chart"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-18"
     owns: ["SPEC.md", "app/R/", "app/app.R", "app/manifest.json", "tests/"]
     notes: >
       The app charts hourly means (X-bar) and hourly ranges, and estimates sigma
@@ -244,7 +244,17 @@ tasks:
       demo/show_numbers.R still prints DEMO OK with the same fridge lines,
       Rscript -e "testthat::test_dir('tests')" passes, and the Fridge Detail
       page shows the new chart beside the range chart.
-    result: ""
+    result: "s-chart shipped on Fridge Detail. c4/B5/B6 computed from c4 =
+      sqrt(2/(n-1))*exp(lgamma(n/2)-lgamma((n-1)/2)) in app/R/sd_constants.R,
+      never looked up; n=4 gives c4=0.9213177, B6=2.0877494, B5=0 and n=25 gives
+      B5=0.5589347, which catches any hardcoded zero lower limit. Test 1 only,
+      same frozen baseline, strict comparisons, and display only - the s-chart
+      never reaches the badge, RPN, units_at_risk or violations table. Suite
+      754 passing 0 failing (was 533); all 11 SPEC section 4 known answers exact;
+      demo/show_numbers.R still DEMO OK with identical fridge lines; every
+      published number for all six demo fridges asserted unchanged against a
+      pre-change snapshot; manifest checksums refreshed by hand for 5 files,
+      platform still 4.5.2."
 
   - id: H-11
     title: "Why these statistics: a plain-language section in README.md"

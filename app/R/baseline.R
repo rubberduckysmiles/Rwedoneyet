@@ -37,7 +37,8 @@ freeze_baseline <- function(values, subgroup_n = 4, baseline_subgroups = 48, min
   list(
     limits = list(
       xbar = xbar_limits(center, sigma_short, subgroup_n),
-      range = range_chart_limits(sigma_short, subgroup_n)
+      range = range_chart_limits(sigma_short, subgroup_n),
+      sd = sd_chart_limits(sigma_short, subgroup_n)
     ),
     capability = capability_indices(center, sigma_short, sigma_all),
     lag1 = lag1_autocorrelation(base_readings),

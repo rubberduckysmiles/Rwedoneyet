@@ -203,6 +203,44 @@ range_plot <- function(a, keep, dark) {
     themed(dark)
 }
 
+# The standard deviation (s) chart. Same shape as the range chart, and like it
+# this runs test 1 only. Its flags are drawn here and nowhere else: they do not
+# reach the violations table, the badge, the RPN or units_at_risk.
+sd_plot <- function(a, keep, dark) {
+  if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
+  d <- a$subgroups
+  d$flag <- a$sd_flagged
+  d <- d[keep, , drop = FALSE]
+  if (nrow(d) == 0) return(empty_plot("no hours in this date range", dark))
+  lim <- a$baseline$limits$sd
+  line_x <- range(d$time)
+  f <- d[d$flag, , drop = FALSE]
+  ok <- d[!d$flag, , drop = FALSE]
+
+  p <- plot_ly() %>%
+    add_lines(x = d$time, y = d$sd, line = list(color = "rgba(120,120,120,0.8)", width = 1),
+              hoverinfo = "skip", showlegend = FALSE) %>%
+    add_markers(x = ok$time, y = ok$sd, marker = list(color = "#6C757D", size = 5),
+                text = sprintf("%s<br>s %.3f C", time_text(ok$time), ok$sd), hoverinfo = "text", name = "Hourly s")
+  if (nrow(f) > 0) {
+    p <- p %>% add_markers(x = f$time, y = f$sd, marker = list(color = TEST_COLORS[1], size = 10),
+                           text = sprintf("%s<br>s %.3f C<br>Test 1: %s", time_text(f$time), f$sd, a$sd_test$meaning),
+                           hoverinfo = "text", name = "Test 1")
+  }
+  for (spec in list(list("UCL", lim$ucl, "dash"), list("Center", lim$center, "solid"), list("LCL", lim$lcl, "dash"))) {
+    p <- p %>% add_lines(x = line_x, y = rep(spec[[2]], 2), name = spec[[1]],
+                         line = list(color = "#444444", dash = spec[[3]], width = 1.5),
+                         text = sprintf("%s %.3f C", spec[[1]], spec[[2]]), hoverinfo = "text")
+  }
+  base <- baseline_shape(d)
+  p %>%
+    layout(shapes = if (is.null(base)) list() else list(base),
+           yaxis = list(title = "Hourly standard deviation (\u00B0C)", autosize = TRUE),
+           xaxis = list(title = ""),
+           title = list(text = "Standard deviation chart (dispersion; limits frozen)", font = list(size = 14))) %>%
+    themed(dark)
+}
+
 histogram_plot <- function(a, dark) {
   if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
   shapes <- list(vline(SPEC_LOW, "#444444"), vline(TARGET_TEMP, "#6C757D"), vline(SPEC_HIGH, "#444444"))
@@ -329,6 +367,7 @@ ui <- bslib::page_navbar(
       ),
       bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
       bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
+      bslib::card(plotlyOutput("sd_chart", height = "280px"), full_screen = TRUE),
       bslib::card(
         bslib::card_header("Blood types in this fridge"),
         uiOutput("bloodtype_note"),
@@ -550,6 +589,10 @@ server <- function(input, output, session) {
   output$range_chart <- renderPlotly({
     a <- detail()
     range_plot(a, visible_rows(a, input$dates), dark())
+  })
+  output$sd_chart <- renderPlotly({
+    a <- detail()
+    sd_plot(a, visible_rows(a, input$dates), dark())
   })
   output$violations_table <- DT::renderDT({
     a <- detail()

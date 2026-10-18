@@ -29,6 +29,21 @@ range_chart_limits <- function(sigma_short, n) {
   )
 }
 
+# Standard deviation (s) chart limits. The center is c4*sigma_short because
+# E[s] = c4*sigma, and the lines are B5*sigma_short and B6*sigma_short.
+# The lower limit is held at 0 because a standard deviation cannot be negative.
+sd_chart_limits <- function(sigma_short, n) {
+  sc <- sd_constants(n)
+  list(
+    center = sc$c4 * sigma_short,
+    lcl = max(0, sc$B5 * sigma_short),
+    ucl = sc$B6 * sigma_short,
+    c4 = sc$c4,
+    B5 = sc$B5,
+    B6 = sc$B6
+  )
+}
+
 # Cpk uses sigma_short. Ppk uses sigma_overall. gap = Cpk - Ppk.
 # When a sigma is 0 (or missing) its index is NA, and so is the gap. Never Inf.
 capability_indices <- function(mean, sigma_short, sigma_overall, lsl = 1, usl = 6) {
