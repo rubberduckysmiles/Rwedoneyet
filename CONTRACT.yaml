@@ -916,9 +916,9 @@ tasks:
   - id: H-29
     title: "Make Demo.md readable on GitHub, and point demo/README.md at the alert-rate script"
     points: "5 - Tool Documentation: a judge reads Demo.md on GitHub"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["Demo.md", "demo/README.md"]
     notes: >
       Demo.md is the only file in this repo that is not UTF-8: 12 bytes of
@@ -938,4 +938,4 @@ tasks:
       the right character; its diff against HEAD changes only the lines that
       contained those bytes; demo/README.md describes demo/alert_rate.R and what
       it prints; testthat still prints 0 failures.
-    result: ""
+    result: "Demo.md is UTF-8 now: the 12 Windows-1252 bytes it held on 5 lines (en dashes, an em dash, degree signs, a multiplication sign and a plus-or-minus) became the characters they always meant, so a reader on GitHub sees 1-6 C, severity x occurrence x urgency and center +/- 3 SE instead of replacement characters. Quoted: reading the file as UTF-8 succeeds with 0 replacement characters, git diff changes only lines 5, 7, 29, 35 and 37 - exactly the lines that held the 12 bytes - and the file grew from 2395 to 2411 bytes with no word changed. demo/README.md gained a block pointing at demo/alert_rate.R and saying what it prints. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974."

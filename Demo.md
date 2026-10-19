@@ -2,9 +2,9 @@
 
 ## Value for the blood bank
 
-Bank of Bloody Mary helps blood-bank operations managers act at shift change to decide which refrigerator to service, evacuate, or leave alone before the next shift, so red blood cells stay within 1–6 °C. It ranks fridges by RPN (severity × occurrence × urgency), highlights action items, shows bags at risk, explains Cpk, Ppk, and gap, and tracks backup generator transfer times.
+Bank of Bloody Mary helps blood-bank operations managers act at shift change to decide which refrigerator to service, evacuate, or leave alone before the next shift, so red blood cells stay within 1â€“6 Â°C. It ranks fridges by RPN (severity Ã— occurrence Ã— urgency), highlights action items, shows bags at risk, explains Cpk, Ppk, and gap, and tracks backup generator transfer times.
 
-Control limits (what the fridge does, center ± 3 SE) are kept separate from spec limits (1–6 °C, what red cells need).
+Control limits (what the fridge does, center Â± 3 SE) are kept separate from spec limits (1â€“6 Â°C, what red cells need).
 
 ## Getting started
 
@@ -26,15 +26,15 @@ Rscript app/workflow.R
 - Limits frozen from first 48 hours
 
 ### 2) Fridge Detail
-- X-bar, range, and s-charts with baseline shaded; 1–2 SE zone lines shown (not control limits)
+- X-bar, range, and s-charts with baseline shaded; 1â€“2 SE zone lines shown (not control limits)
 - Violations table with hour/chart/test and plain-English meaning
 - Blood types present and which are at risk
 - Date range picker
 
 ### 3) Capability
-- Cpk, Ppk, Gap with plain captions; histogram (1 °C, 3.5 °C target, 6 °C) noting spec vs control limits
+- Cpk, Ppk, Gap with plain captions; histogram (1 Â°C, 3.5 Â°C target, 6 Â°C) noting spec vs control limits
 - Rolling 24-hour Ppk (96 readings = 24h at 15m); falling line means worsening
-- Backup generator stats (last/typical, beyond limits, switchover) — transfer time is seconds from power loss to load
+- Backup generator stats (last/typical, beyond limits, switchover) â€” transfer time is seconds from power loss to load
 - 10 s line is team-chosen threshold (not spec or control limit)
 
 ### 4) Backup generator

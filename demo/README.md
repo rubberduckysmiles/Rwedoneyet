@@ -18,6 +18,14 @@ Rscript demo/show_numbers.R
 
 The command prints `DEMO OK` and the lines below. If your lines differ, the data or the functions changed.
 
+The badge has its own measurement, because it is the one number that decides which fridge the manager opens first:
+
+```bash
+Rscript demo/alert_rate.R
+```
+
+It applies the shipped badge rule and four alternatives to 200 simulated fridges per population — healthy, drifting and stepped — and to the three committed readings files, then prints `every fridge agrees with the shipped badge` while that copy of the shipped rule still matches `analyze_fridge()`. The numbers behind the rule now in the app are in `data/README.md`.
+
 ## readings.csv
 
 Command: `Rscript demo/show_numbers.R`
