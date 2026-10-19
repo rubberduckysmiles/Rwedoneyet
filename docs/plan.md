@@ -1,4 +1,4 @@
-# Plan: ColdChain Monitor
+# Plan: Bank of Bloody Mary
 
 User: the blood-bank operations manager. Question: which fridge to service or evacuate this shift, before red cells leave 1–6 °C. Target 3.5 °C is the middle of the spec. It is not the control-chart center.
 

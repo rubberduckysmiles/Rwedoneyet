@@ -1,4 +1,4 @@
-# Publish ColdChain Monitor to the course Posit Connect server, from this machine.
+# Publish Bank of Bloody Mary to the course Posit Connect server, from this machine.
 #
 #   Rscript app/deployme.R          # run from the repo root
 #

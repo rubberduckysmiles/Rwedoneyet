@@ -1,4 +1,4 @@
-# ColdChain Monitor app
+# Bank of Bloody Mary app
 
 Shiny dashboard for the blood-bank operations manager. It ranks refrigerators so a shift can service or evacuate a fridge before red blood cells leave 1–6 °C. The full method, every function argument, and the hand-check numbers are in the repo [README](../README.md). The dataset walk-through is [demo/README.md](../demo/README.md).
 
@@ -31,7 +31,7 @@ Prints `WORKFLOW OK` when the ten-hour example matches SPEC.md section 4.
 
 ## Published app
 
-[ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). Content name `rubberduckysmiles-Rwedoneyet-shiny`. The Connect bundle is this folder, so the demo CSVs also live in `app/data/`. Locally, if `data/` exists next to `app/`, the app reads that folder instead.
+[Bank of Bloody Mary on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). Content name `rubberduckysmiles-Rwedoneyet-shiny`. The Connect bundle is this folder, so the demo CSVs also live in `app/data/`. Locally, if `data/` exists next to `app/`, the app reads that folder instead.
 
 ## Pages
 

@@ -1,4 +1,4 @@
-# ColdChain Monitor demo
+# Bank of Bloody Mary demo
 
 These files are synthetic. Seed 5300. The codebook is `data/README.md`.
 

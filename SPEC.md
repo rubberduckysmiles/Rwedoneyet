@@ -55,7 +55,7 @@ Fixed for every team:
 - A small tool that runs beats a large tool that does not.
 
 ## 6. Outputs
-- **What the user sees:** ColdChain Monitor. Overview shows fridges needing action, blood units at risk, average Ppk, and the last generator transfer, then fridge cards sorted by risk priority number. Fridge Detail shows an X-bar chart over a range chart over a standard deviation chart, with the baseline shaded and flagged hours marked, then the blood types held in that fridge with each type's at-risk bags marked. Capability shows Cpk, Ppk, the gap, a histogram with lines at 1 °C, 3.5 °C, and 6 °C, a rolling 24-hour Ppk, and one sentence: "capable and stable", "inside the spec width, but not stable", or "not capable". How to read the badge: red means act this shift, amber means watch, green means leave it.
+- **What the user sees:** Bank of Bloody Mary. Overview shows fridges needing action, blood units at risk, average Ppk, and the last generator transfer, then fridge cards sorted by risk priority number. Fridge Detail shows an X-bar chart over a range chart over a standard deviation chart, with the baseline shaded and flagged hours marked, then the blood types held in that fridge with each type's at-risk bags marked. Capability shows Cpk, Ppk, the gap, a histogram with lines at 1 °C, 3.5 °C, and 6 °C, a rolling 24-hour Ppk, and one sentence: "capable and stable", "inside the spec width, but not stable", or "not capable". How to read the badge: red means act this shift, amber means watch, green means leave it.
 
 ## 7. Test datasets and codebook (rubric: demo 10, datasets 5, codebook 5)
 2-3 small CSVs in `data/`, invented but shaped like real field data, each showing one behavior.

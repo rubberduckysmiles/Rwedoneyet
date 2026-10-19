@@ -1,9 +1,9 @@
 # Hi friends!
 
-This is the handoff for ColdChain Monitor.
+This is the handoff for Bank of Bloody Mary.
 H-01 through H-07 and H-09 through H-18 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). **H-08 is the only task left**, and it is a person, not a commit: it submits the repo on Devpost. Please do not mark anything done until the checks below are actually run.
 
-The live app, with no login, is [ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). A logged-out request returned HTTP 200 and the page title ColdChain Monitor. Access on Connect is set so anyone can open it. Leave it that way. Judges have to open it without an account.
+The live app, with no login, is [Bank of Bloody Mary on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). A logged-out request returned HTTP 200 and the page title Bank of Bloody Mary. Access on Connect is set so anyone can open it. Leave it that way. Judges have to open it without an account.
 
 Virtual DL deadline is Friday, October 23, 2026, 3:00 PM ET. The prompt is Blood Banks. The user is the blood-bank operations manager who decides, each shift, which fridge to service or evacuate before red blood cells leave 1–6 °C.
 

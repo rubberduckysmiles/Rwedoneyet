@@ -822,9 +822,9 @@ tasks:
   - id: H-27
     title: "Adopt Bank of Bloody Mary as the product name in every document"
     points: "5 - Tool Documentation: the live tool and the write-up should agree"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["README.md", "Demo.md", "SPEC.md", "app/README.md", "demo/README.md", "demo/show_numbers.R", "app/qc.R", "app/app.R", "app/deployme.R", "app/testme.R", "data/make_scenarios.R", "docs/plan.md", "hi_friends.md", "app/manifest.json"]
     notes: >
       The published app's navbar title is "Bank of Bloody Mary" (app/app.R,
@@ -850,4 +850,4 @@ tasks:
       prints 0 failures; demo/show_numbers.R prints DEMO OK and app/workflow.R
       prints WORKFLOW OK with unchanged numbers; and all 16 manifest checksums
       match their files.
-    result: ""
+    result: "Bank of Bloody Mary is now the name in all 19 places the old one appeared, across 13 files: README.md (3), Demo.md (2), SPEC.md (1), app/README.md (2), demo/README.md (1), hi_friends.md (3), docs/plan.md (1) and the line-1 comment of app/app.R, app/qc.R, app/deployme.R, app/testme.R, data/make_scenarios.R and demo/show_numbers.R. The hi_friends.md fix includes the false claim that the live page title was ColdChain Monitor: a logged-out request now returns HTTP 200 with <title>Bank of Bloody Mary</title>, which is what that sentence says. Quoted: git grep -i coldchain matches only CONTRACT.yaml, this task's own notes plus the historical H-07 result left as written, and the first line of README.md is '# Bank of Bloody Mary'. Demo.md is CP1252, not UTF-8, so the rename was written back in the same encoding, byte for byte apart from the new name. app/app.R and app/qc.R are both in the published bundle, so their two checksums moved: app.R from a98f4c5e643039d79e2ce15e5dcc8229 to 0326a21ebea9fd0724cf4fdf4e96dff3 and qc.R from 02771dddcfcdf1cfb1b6c50567d07650 to 11fa215164145e7015f968dfed0fe475, refreshed by hand as md5 of the LF-normalised bytes; all 16 checksums match their files, platform still 4.5.2. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974, app/workflow.R printed WORKFLOW OK, and demo/show_numbers.R printed DEMO OK with n=30 center=7.550 lower=1.270 upper=13.830 transfer=48 seconds, so no published number moved."

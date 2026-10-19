@@ -1,6 +1,6 @@
-# ColdChain Monitor
+# Bank of Bloody Mary
 
-ColdChain Monitor is a Shiny dashboard for a blood-bank operations manager. Each shift, it ranks the refrigerators that store red blood cells so the manager can service or evacuate a fridge before the bags leave 1–6 °C.
+Bank of Bloody Mary is a Shiny dashboard for a blood-bank operations manager. Each shift, it ranks the refrigerators that store red blood cells so the manager can service or evacuate a fridge before the bags leave 1–6 °C.
 
 Team Keep It Cool. Cornell Six Sigma Hackathon, Virtual DL Challenge. Prompt: Blood Banks. The numbers are computed in plain R under `app/R/`. The Shiny page only displays them.
 
@@ -8,7 +8,7 @@ The walk-through of the three synthetic datasets, with the numbers the demo prin
 
 ## 1. Published app
 
-The published app is [ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/).
+The published app is [Bank of Bloody Mary on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/).
 
 A logged-out browser loads that page. The content name is `rubberduckysmiles-Rwedoneyet-shiny`. The publisher key stays in GitHub Actions secrets and is not in this repo.
 

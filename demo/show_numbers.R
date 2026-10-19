@@ -1,4 +1,4 @@
-# Print the ColdChain Monitor numbers for the three demo CSVs.
+# Print the Bank of Bloody Mary numbers for the three demo CSVs.
 # From the repo root:  Rscript demo/show_numbers.R
 # A teammate should see the same lines as demo/README.md.
 

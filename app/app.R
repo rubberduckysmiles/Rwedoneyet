@@ -1,4 +1,4 @@
-# ColdChain Monitor: a Shiny dashboard for the blood-bank lab manager.
+# Bank of Bloody Mary: a Shiny dashboard for the blood-bank lab manager.
 # This file only draws screens. Every number comes from a function in app/R/ (see monitor.R).
 # Start it from the repo root with:  Rscript app/testme.R
 

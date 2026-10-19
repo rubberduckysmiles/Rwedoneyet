@@ -1,4 +1,4 @@
-# make_scenarios.R - generates a pair of alternative readings sets for the ColdChain Monitor.
+# make_scenarios.R - generates a pair of alternative readings sets for the Bank of Bloody Mary.
 # Run from the repo root:  Rscript data/make_scenarios.R
 #
 # Output (each folder also receives a copy of inventory.csv and generator_log.csv):

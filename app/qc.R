@@ -1,4 +1,4 @@
-# ColdChain Monitor: the one file to source.
+# Bank of Bloody Mary: the one file to source.
 # From the repo root:  source("app/qc.R")
 # It loads every .R file in app/R/. There are no statistics in this file, only source() calls.
 
