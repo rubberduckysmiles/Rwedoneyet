@@ -782,3 +782,72 @@ tasks:
       854 before it; and CODEBOOK.md states in one line that no statistic uses
       door_open or on_generator.
     result: "tests/test-scenarios.R drives load_demo_data() + analyze_all() over both committed sets and pins them by md5 (a6ade73760933721328b87202e00c8a6 and 2617a7f5de9679533f8d5890d0a4fb12 as printed in data/README.md) plus per-fridge mean/sd/min/max, flag counts and verdicts, so any file change or moved verdict fails it. Quoted: testthat::test_file('tests/test-scenarios.R') printed FAIL 0 | WARN 0 | SKIP 0 | PASS 116, and the full suite printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974, up from 854. Measured verdicts: the bad set has 0 readings outside 1-6 C, 0 red, 5 amber, needing_action 5, 275 bags at risk (F04 220, F06 55); the good set has 16 readings above 6 C (all F06, 11 of them after the baseline), F02 amber with Cpk 0.537 and 0 readings out of range while F06 is red with Cpk 0.598, F05 green with 0 violations, needing_action 5, 67 bags at risk. FINDING, not a test to bend: the bad set has nothing out of range yet reports 5 of 6 fridges needing action, and it is not dependence - lag-1 is under 0.16 on every fridge - but multiple testing, about 120 post-baseline subgroups read against 8 tests with the badge turning amber on any single post-baseline flag. Simulating 200 healthy iid-normal fridges through analyze_fridge() gave 92.0% with a post-baseline flag, 64.5% amber, 27.5% red (300 fridges: 91.7/62.3/29.3); the test pins that with loose bounds. data/README.md now carries this table and the finding, and CODEBOOK.md states in one line that no statistic consumes door_open or on_generator. The wrong explanation in hi_friends.md line 57 is NOT fixed here - it is outside this task's files and is proposed as H-26."
+
+  - id: H-26
+    title: "Measure a fix for the alert rate before anyone changes the shipping rule"
+    points: "the graded core: a monitor that flags a healthy fleet has little value"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["demo/alert_rate.R"]
+    notes: >
+      H-25 measured the problem and deliberately did not fix it:
+      data/scenario_one_bad has nothing outside 1-6 C, yet the monitor reports 5
+      of 6 fridges needing action, 275 bags at risk, and 200 simulated healthy
+      iid-normal fridges give 92.0% with a post-baseline flag, 64.5% amber and
+      27.5% red. The cause is not dependence (lag-1 is under 0.16 on every
+      fridge) but the number of chances to flag: about 120 post-baseline
+      subgroups read against 8 tests, with the badge in app/R/monitor.R turning
+      amber on ANY single post-baseline flag and red on any single test-1 point
+      or any of the last 96 readings out of range. The team asked for numbers
+      before a decision, not a fix. This task adds demo/alert_rate.R, which
+      reuses analyze_fridge() and applies candidate aggregation rules OUTSIDE
+      app/ so nothing shipped changes, and prints for the current rule and at
+      least two stricter candidates - for example amber needs two or more
+      monitored flags, or a run of two consecutive flagged subgroups, and red
+      needs a run rather than one point - the post-baseline flag rate, amber
+      share and red share on a fixed seed of healthy fridges, plus what each
+      rule would say about data/readings.csv and the two committed scenario
+      sets. The numbers and the recommended rule go in this task's result.
+      Changing the shipped rule is a separate task, to be proposed only after
+      the team reads them.
+    definition_of_done: >
+      Rscript demo/alert_rate.R runs with no arguments and prints, with the seed
+      and the fridge count stated, a comparison of the current badge rule with
+      at least two candidate rules on simulated healthy fridges, and the same
+      comparison for the three committed readings files; nothing under app/ and
+      no existing document changes; testthat still prints 0 failures.
+    result: ""
+
+  - id: H-27
+    title: "Adopt Bank of Bloody Mary as the product name in every document"
+    points: "5 - Tool Documentation: the live tool and the write-up should agree"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["README.md", "Demo.md", "SPEC.md", "app/README.md", "demo/README.md", "demo/show_numbers.R", "app/qc.R", "app/app.R", "app/deployme.R", "app/testme.R", "data/make_scenarios.R", "docs/plan.md", "hi_friends.md", "app/manifest.json"]
+    notes: >
+      The published app's navbar title is "Bank of Bloody Mary" (app/app.R,
+      changed by Sue Cho in 4b37c57), and the team decided on 2026-10-19 to keep
+      that pun as the product name rather than rename the app back. Everything
+      else still says ColdChain Monitor: README.md, Demo.md, SPEC.md,
+      app/README.md, demo/README.md, hi_friends.md, docs/plan.md, and the header
+      comment of each script in app/, demo/ and data/. hi_friends.md line 6 also
+      claims the live page title is ColdChain Monitor, which stopped being true
+      in 4b37c57 - the live page title is now Bank of Bloody Mary, measured, so
+      correct that sentence rather than rename it. Two of the files are in the
+      published bundle, app/app.R and app/qc.R, each a line-1 comment, so their
+      two manifest checksums move and must be refreshed by hand as md5 of the
+      LF-normalised bytes, the H-24 and H-17 mechanic; manifestme.R refuses to
+      run on this 4.6.1 machine and should not run anyway. Do NOT rewrite
+      historical ledger results that say ColdChain Monitor - H-07 quoted the
+      then-correct title - this task's own result uses the new name.
+      Infrastructure names stay: the GitHub repo Rwedoneyet, the Connect content
+      name rubberduckysmiles-Rwedoneyet-shiny, and the deploy workflow.
+    definition_of_done: >
+      git grep -i coldchain finds nothing outside historical ledger entries; the
+      live app's page title and the first line of README.md agree; testthat
+      prints 0 failures; demo/show_numbers.R prints DEMO OK and app/workflow.R
+      prints WORKFLOW OK with unchanged numbers; and all 16 manifest checksums
+      match their files.
+    result: ""
