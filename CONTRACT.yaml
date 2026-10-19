@@ -540,3 +540,30 @@ tasks:
       no manifest refresh was needed because neither changed file is bundled -
       its two README hits are the pkgconfig and withr package URLs; testthat
       printed FAILED 0 | WARN 0 | SKIP 0 | PASS 810."
+
+  - id: H-17
+    title: "The Switchover caption must agree with the Switchover value"
+    points: "tool depth: a card that reads 'investigate' cannot also say every test is inside the limits"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["app/app.R", "tests/test-capability_generator.R", "app/manifest.json"]
+    notes: >
+      The Capability tab's Backup generator card shows Switchover as
+      "investigate" when a transfer test falls outside the individuals limits,
+      but its caption is chosen from gs$assessable, which only says that limits
+      could be drawn. On the demo log the two disagree: 30 tests, center 7.55 s,
+      UCL 13.83 s, one test at 48.0 s on 2026-10-06, so in_control is FALSE and
+      beyond is 1, yet the caption reads "every test inside the limits".
+      Choose the caption from in_control: the message when limits could not be
+      drawn, "every test inside the limits" only when in_control is TRUE, and a
+      count of the tests beyond the limits otherwise.
+    definition_of_done: >
+      A test drives the card with a generator series that has one point beyond
+      the limits and asserts the caption names that count and never says every
+      test is inside the limits, and drives it with an in-control series and
+      asserts the opposite; Rscript -e "testthat::test_dir('tests')" prints 0
+      failures, Rscript demo/show_numbers.R still prints DEMO OK with the same
+      generator line, and app/manifest.json's app.R checksum matches the edited
+      file.
+    result: "Switchover caption now comes from in_control, not from whether limits could be drawn. Demo log (30 tests, center 7.55 s, UCL 13.83 s, one test at 48.0 s) now reads 'investigate' with '1 of 30 tests beyond the limits' instead of 'every test inside the limits'; an in-control fixture still reads 'every test inside the limits'. Quoted: testthat FAIL 0 | WARN 0 | SKIP 0 | PASS 854 (was 848); demo/show_numbers.R DEMO OK with n=30 center=7.550 lower=1.270 upper=13.830 transfer=48; app/workflow.R WORKFLOW OK; manifest 16 of 16 checksums match, app.R now 72c9be88f3a58cd2a665f9fe9be545d4."

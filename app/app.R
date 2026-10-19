@@ -831,7 +831,9 @@ server <- function(input, output, session) {
           bslib::value_box("Tests beyond the limits", sprintf("%d", gs$beyond),
                            tags$small(sprintf("of %d tests run", gs$n))),
           bslib::value_box("Switchover", switchover,
-                           tags$small(if (gs$assessable) "every test inside the limits" else gs$message))
+                           tags$small(if (is.na(gs$in_control)) gs$message
+                                      else if (gs$in_control) "every test inside the limits"
+                                      else sprintf("%d of %d tests beyond the limits", gs$beyond, gs$n)))
         ),
         tags$p(class = "text-muted small mb-0",
                "The 10 s line is a threshold the team chose, not a control limit."))
