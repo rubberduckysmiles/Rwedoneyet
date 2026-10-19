@@ -400,10 +400,11 @@ tasks:
   - id: H-14
     title: "User and use case, stated one way everywhere"
     points: "scope and user: the rubric's user-and-use-case line, consistent across SPEC, README and the app"
-    status: in_progress
+    status: done
     owner: "agent"
     started_at: "2026-10-19"
     owns: ["SPEC.md", "README.md", "app/app.R", "data/README.md"]
+    result: "User and use case stated one way: blood-bank operations manager acts at shift change to decide which fridge to service, evacuate, or leave alone before the next shift so red cells stay within 1–6 °C. SPEC.md §2, app/app.R header, data/README.md aligned. No behavioral changes; tests PASS 848, DEMO OK, WORKFLOW OK."
     notes: >
       SPEC section 2 and README line 3 both name the user, but thinly, and the
       repo has drifted between two names for them: SPEC and README say
