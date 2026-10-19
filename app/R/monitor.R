@@ -17,7 +17,6 @@ STATUS_LABELS <- c(
   gray = "No limits yet"
 )
 
-READINGS_COLUMNS <- c("fridge_id", "timestamp", "temp_c", "door_open", "on_generator")
 # blood_type is optional so a manager's own totals-only sheet still loads; the demo file has it.
 INVENTORY_COLUMNS <- c("fridge_id", "blood_units")
 GENERATOR_COLUMNS <- c("date", "transfer_time_sec")
