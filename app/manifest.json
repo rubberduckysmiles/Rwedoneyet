@@ -2030,7 +2030,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "485dce55fcb8d7b1b3b5ca5ae2bf01a0"
+      "checksum": "7584f9af3cb8906560fd3652b86d5b5f"
     },
     "data/generator_log.csv": {
       "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
@@ -2049,6 +2049,9 @@
     },
     "R/forecast.R": {
       "checksum": "1e276d5a7cf5c3515b7fd97ac908ad83"
+    },
+    "R/generator_stats.R": {
+      "checksum": "596b94c40ba8aac370410d9240798124"
     },
     "R/imr.R": {
       "checksum": "c88c59fa426fc6fd53e45daf44ca6ba6"

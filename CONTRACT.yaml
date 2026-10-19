@@ -423,7 +423,7 @@ tasks:
   - id: H-15
     title: "Generator statistics and plain-language captions on the Capability tab"
     points: "tool depth: the Capability tab explains Cpk, Ppk and the gap in words, and carries the generator's own statistics, so the backup-power story is visible where capability is judged"
-    status: in_progress
+    status: done
     owner: "agent"
     started_at: "2026-10-18"
     owns: ["app/app.R", "app/R/", "app/manifest.json", "tests/", "README.md"]
@@ -461,4 +461,21 @@ tasks:
       passes, app/manifest.json checksums are refreshed by hand with the
       platform still 4.5.2, and README.md explains the generator statistics in
       its own section without pointing at another file to be understood.
-    result: ""
+    result: "Capability tab now explains Cpk, Ppk and the gap in plain words, and
+      carries the backup generator's own statistics. generator_stats() in app/R/
+      is a projection: it copies last, typical (the I-chart center), ucl, beyond,
+      n, message and in_control from generator_analysis() and computes nothing of
+      its own, so the Capability tab and the Backup generator tab cannot drift
+      apart; in_control is NA whenever imr_limits declines to draw limits, so the
+      page says 'cannot say' rather than 'all clear'. rv$generator renamed
+      rv$backup_generator, and every on-screen 'Generator' relabelled 'Backup
+      generator'. A test asserts no line of app/app.R calls the 10 second figure
+      a limit - the three strings left now read threshold. DoD output quoted:
+      testthat printed FAILED 0 | WARN 0 | SKIP 0 | PASS 810 (was 754); Rscript
+      demo/show_numbers.R printed DEMO OK with the same fridge and generator
+      lines (n=30 center=7.550 lower=1.270 upper=13.830 transfer=48 seconds);
+      Rscript app/workflow.R printed WORKFLOW OK; the hand-refreshed
+      app/manifest.json verified 16 of 16 checksums at platform 4.5.2, printing
+      ALL CHECKSUMS MATCH: TRUE; README.md gained 'What the backup generator
+      does, and what its numbers mean', self-contained with no pointer to
+      another file."
