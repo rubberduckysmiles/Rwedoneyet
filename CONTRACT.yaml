@@ -666,3 +666,50 @@ tasks:
       the override path still writes a manifest, and app/README.md states the
       platform rule in one line.
     result: "manifestme.R now guards the platform. It reads the committed platform, compares it with this machine's R version and refuses before writing when they differ, so this 4.6.1 laptop cannot move the bundle off 4.5.2 by accident; ALLOW_PLATFORM_CHANGE=1 overrides deliberately. Quoted: Rscript app/manifestme.R printed 'Error: This machine runs R 4.6.1 but app/manifest.json pins platform 4.5.2, the R on the Connect server.' and exited 1, and app/manifest.json's md5 was 4242A54E58D103355A90F9B99EC54C2B before and after the run, so nothing was written. In a scratch copy of app/, with ALLOW_PLATFORM_CHANGE=1 it printed 'Wrote app/manifest.json at platform 4.6.1 (was 4.5.2)' and the copy's platform became 4.6.1; a second run with no override, pinned and running now both 4.6.1, printed 'Wrote app/manifest.json at platform 4.6.1 (was 4.6.1)' and exited 0. The real app/manifest.json still reports platform 4.5.2, 16 files, no checksum mismatch, and app/README.md's manifestme row states the rule and the override. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854."
+
+  - id: H-22
+    title: "Restore the two scenario readings sets from the data-updates pass"
+    points: "team decision: keep the scenario CSVs that were tuned by hand, not the generator's output"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["data/scenario_one_bad/readings.csv", "data/scenario_one_good/readings.csv", "data/README.md", "data/make_scenarios.R", "hi_friends.md"]
+    notes: >
+      By team decision the two scenario sets go back to the versions on main at
+      2e03233 (the pass that came in with the data-updates branch), undoing the
+      cf7b2dc regeneration. Those files do NOT come from make_scenarios.R: running
+      that script writes a different scenario and would overwrite them. Two
+      consequences get written down honestly rather than papered over. First, in
+      the restored scenario_one_bad nothing fails - all six fridges are
+      common-cause noise - so the folder name describes the intent, not the file.
+      Second, in the restored scenario_one_good the door and generator flags are
+      present but the temperatures do not spike, one fridge sits near 1.5 C and
+      another near 5.0 C, and two others vary about half as much as standard
+      noise. The per-fridge tables and checksums in data/README.md are rewritten
+      to the restored measurements, the byte-for-byte reproduction claim is
+      replaced with the truth, make_scenarios.R's header stops claiming it writes
+      these files, and hi_friends.md stops saying the scenario sets come from it.
+    definition_of_done: >
+      git diff of data/scenario_one_bad/readings.csv and
+      data/scenario_one_good/readings.csv against 2e03233 is empty; every
+      per-fridge claim in data/README.md's scenario tables matches the restored
+      files measured in R; grep finds no claim that data/make_scenarios.R
+      reproduces them; Rscript -e "testthat::test_dir('tests')" still passes.
+    result: ""
+
+  - id: H-23
+    title: "Remove the stray tracked test.txt"
+    points: "repo hygiene: a judge browsing the repo should not find a file containing 'test!'"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["test.txt"]
+    notes: >
+      test.txt has held the single line "test!" since commit 0c29c53 ("this is my
+      test") and nothing references it: git grep for test.txt returns no hits
+      outside git history. It survived H-16 because that task's owns list did not
+      include it. Remove it from the index and from disk.
+    definition_of_done: >
+      git ls-files test.txt prints nothing, the file is gone from the working
+      tree, and git grep -n "test\.txt" finds no reference to it.
+    result: ""
