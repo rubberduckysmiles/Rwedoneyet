@@ -442,6 +442,7 @@ ui <- bslib::page_navbar(
 
   bslib::nav_panel(
     "Fridge Detail",
+    uiOutput("detail_alert"),
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
         selectInput("fridge", "Fridge", choices = character(0)),
@@ -693,6 +694,46 @@ server <- function(input, output, session) {
   })
 
   # ---- Fridge Detail
+  # Banner at the top of Fridge Detail: which special-cause rules fired (monitored only),
+  # with a plain-language description of each. Green "stable" when none fired.
+  RULE_NAMES <- c(
+    "1" = "Rule 1: one point beyond 3 sigma",
+    "2" = "Rule 2: nine points in a row on one side of the center",
+    "3" = "Rule 3: six points in a row steadily rising or falling",
+    "4" = "Rule 4: fourteen points in a row alternating up and down",
+    "5" = "Rule 5: two of three points beyond 2 sigma on the same side",
+    "6" = "Rule 6: four of five points beyond 1 sigma on the same side",
+    "7" = "Rule 7: fifteen points in a row inside 1 sigma",
+    "8" = "Rule 8: eight points in a row beyond 1 sigma"
+  )
+
+  output$detail_alert <- renderUI({
+    a <- detail()
+    req(a)
+    monitored <- a$violations[a$violations$monitored, , drop = FALSE]
+    if (nrow(monitored) == 0) {
+      return(tags$div(class = "alert alert-success mb-3",
+                      tags$strong("Stable. "),
+                      "No special-cause rule triggered on this fridge."))
+    }
+    uniq_tests <- sort(unique(monitored$test))
+    rules_list <- lapply(uniq_tests, function(t) {
+      meaning <- monitored$meaning[monitored$test == t][1]
+      charts <- unique(monitored$chart[monitored$test == t])
+      rule_name <- RULE_NAMES[as.character(t)]
+      if (is.na(rule_name)) rule_name <- sprintf("Test %d", t)
+      tags$div(class = "mb-2",
+        tags$strong(sprintf("%s (%s): ", rule_name, paste(charts, collapse = ", "))),
+        tags$span(meaning)
+      )
+    })
+    alert_class <- if (a$status == "red") "alert alert-danger" else if (a$status == "amber") "alert alert-warning" else "alert alert-info"
+    tags$div(class = paste(alert_class, "mb-3"),
+      tags$h5(class = "mb-2", "Special-cause rules triggered"),
+      tagList(rules_list)
+    )
+  })
+
   # Blood types for the selected fridge, split into at-risk and within-spec bags.
   bloodtype_data <- reactive({
     a <- detail()
