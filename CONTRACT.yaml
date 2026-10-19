@@ -310,7 +310,7 @@ tasks:
   - id: H-12
     title: "Every number on screen explained where the user meets it"
     points: "documentation: a supervisor can say what any figure on any page means without asking anyone"
-    status: in_progress
+    status: done
     owner: "agent"
     started_at: "2026-10-19"
     owns: ["SPEC.md", "app/app.R", "app/R/", "app/manifest.json", "README.md", "tests/"]
@@ -344,7 +344,16 @@ tasks:
       app/manifest.json checksums are refreshed for the bundled files that
       changed, and demo/show_numbers.R still prints DEMO OK with the same fridge
       lines.
-    result: ""
+    result: "Checked in after the branch merges. Every fridge card states the RPN
+      as severity x occurrence x urgency with all three factors spelled out, and
+      a test asserts the product equals the rpn printed for every demo fridge.
+      Card also captions blood units, Ppk and out-of-spec time; Average Ppk says
+      Ppk is counted in sigmas; the backup-transfer box calls 10 s a team-chosen
+      threshold the manager sets for their own site and says the figure measures
+      seconds to backup power. Rscript -e testthat::test_dir('tests') printed
+      [ FAIL 0 | WARN 0 | SKIP 0 | PASS 848 ]; demo/show_numbers.R printed
+      DEMO OK; app/workflow.R printed WORKFLOW OK; app/manifest.json refreshed
+      for app.R and every bundled checksum now matches, platform 4.5.2."
 
   - id: H-13
     title: "CODEBOOK.md - every file, every variable, and the constants that were chosen"
@@ -429,7 +438,6 @@ tasks:
       words and the app's Overview says who it is for. Rscript -e
       "testthat::test_dir('tests')" still passes, including the source-hygiene
       test that reads README.md.
-    result: ""
 
   - id: H-15
     title: "Generator statistics and plain-language captions on the Capability tab"
