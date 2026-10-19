@@ -149,7 +149,12 @@ tasks:
     notes: >
       Make this clone your own public repo early (a new GitHub repo, then
       git remote set-url origin to it) - H-06 needs it. Submit on Devpost
-      before your track's deadline (docs/schedule.md).
+      before your track's deadline (docs/schedule.md). This task owns
+      .gitignore, so two small additions belong here rather than in a rival
+      task: add data/scenario_generated/ (the scratch output of
+      data/make_scenarios.R, which is deliberately not committed), and
+      confirm the two credential lines .env and .Renviron are still ignored
+      before the repo goes public.
     definition_of_done: >
       git clone of the public repo into an empty folder, then the app/
       testme script and the H-03 tests both pass with no extra steps; git
@@ -715,3 +720,65 @@ tasks:
       git ls-files test.txt prints nothing, the file is gone from the working
       tree, and git grep -n "test\.txt" finds no reference to it.
     result: "test.txt is gone: git rm removed it from the index and from disk, git ls-files test.txt prints nothing, and the file no longer exists. The only remaining mentions of the name anywhere in the repo are inside this task's own ledger entry (its title, owns, notes and definition_of_done), which is the record of the removal rather than a reference to the file; nothing else - no app file, test, README or workflow - ever named it. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854 after the removal; the repo now tracks 181 files."
+
+  - id: H-24
+    title: "Delete the three dead symbols and refresh the two checksums"
+    points: "5 - Tool Documentation: a judge reading the code should not find leftovers"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["app/app.R", "app/R/monitor.R", "app/manifest.json"]
+    notes: >
+      An audit of every top-level definition in app/ (functions and constants,
+      matched against all of app/, tests/ and demo/) found exactly three that
+      nothing references. In app/app.R, ordinal() at about line 43 and
+      sparkline_plot() at about line 111 have no call sites anywhere in the
+      repo, and the only dynamic lookup in app.R is bslib::layout_columns, so
+      they are unreachable; sparkline_plot is a leftover from the
+      sparkline-mean-line branch. In app/R/monitor.R, READINGS_COLUMNS is
+      defined and never used, and it must NOT be wired into the loader: the
+      loader deliberately checks only fridge_id, timestamp and temp_c and keeps
+      door_open and on_generator if they are present, so using the full five
+      would reject the totals-only sheet the app is written to accept. Delete
+      all three. app.R and app/R/monitor.R are both in the published bundle, so
+      the two manifest checksums change and must be refreshed by hand as md5 of
+      the LF-normalised bytes (the H-17 mechanic); manifestme.R refuses to run
+      on this 4.6.1 machine, and it should not run anyway.
+    definition_of_done: >
+      A repo-wide search for ordinal, sparkline_plot and READINGS_COLUMNS finds
+      no definition and no call site; Rscript -e "testthat::test_dir('tests')"
+      prints the same suite size as before with 0 failures; demo/show_numbers.R
+      prints DEMO OK and app/workflow.R prints WORKFLOW OK with unchanged
+      numbers; and all 16 manifest checksums still match their files.
+    result: ""
+
+  - id: H-25
+    title: "Make the two scenario sets earn their keep as a regression test"
+    points: "the graded core: the statistics must be right, and the alternative readings sets currently exercise nothing"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["tests/test-scenarios.R", "CODEBOOK.md", "data/README.md"]
+    notes: >
+      data/scenario_one_bad/ and data/scenario_one_good/ are not loaded by the
+      app and not touched by any test, so the one finished piece of work nothing
+      exercises. Add a test that drives the same loading and analysis path over
+      each set and asserts what is actually there. Every expectation must be
+      MEASURED before it is written down, never assumed: the bad set is a
+      negative control (all six fridges common-cause noise, so no fridge should
+      come back red), and the good set is the awkward-case set (F02 sitting on
+      the 1 C lower limit, F06 with 16 readings above 6 C, F05 with half the
+      usual spread, F03 and F04 carrying door and generator flags with no
+      temperature response). If the pipeline disagrees with what the data looks
+      like, that is a finding to report, not a test to bend. Also add the one
+      line that is missing from the docs: door_open and on_generator are carried
+      through the loader but no statistic consumes them, so they are operator
+      evidence, not inputs to any number.
+    definition_of_done: >
+      A new test runs the pipeline over both scenario files and passes, with
+      each expectation quoted from a measurement made against the committed
+      files; the test fails if a scenario file changes or if a verdict moves;
+      testthat prints the suite with 0 failures and a higher PASS count than the
+      854 before it; and CODEBOOK.md states in one line that no statistic uses
+      door_open or on_generator.
+    result: ""
