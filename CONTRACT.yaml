@@ -154,7 +154,13 @@ tasks:
       task: add data/scenario_generated/ (the scratch output of
       data/make_scenarios.R, which is deliberately not committed), and
       confirm the two credential lines .env and .Renviron are still ignored
-      before the repo goes public.
+      before the repo goes public. One trap worth knowing while you are in this
+      file: that rule also ignores docs/, which is why the only tracked file
+      under docs/ is docs/plan.md (force-added). The event's own docs -
+      criteria, prompts, schedule - are not in this clone and not in the public
+      repo, and no tracked file links to them, so nothing is broken today; but
+      any new file dropped into docs/ needs git add -f, or a "!docs/*.md"
+      exception, to be committed.
     definition_of_done: >
       git clone of the public repo into an empty folder, then the app/
       testme script and the H-03 tests both pass with no extra steps; git
