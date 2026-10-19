@@ -636,9 +636,9 @@ server <- function(input, output, session) {
       bslib::layout_columns(
         fill = FALSE, class = "mt-3",
         col_widths = bslib::breakpoints(sm = 12, md = 6),
-        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.", quiet = TRUE),
+        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "The mean of each fridge\'s Ppk, counted in sigmas. Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.", quiet = TRUE),
         stat_box("Last backup test", transfer,
-                 if (is.na(s$last_transfer)) "No backup test loaded." else "Last backup test \u00b7 wanted under 10 s",
+                 if (is.na(s$last_transfer)) "No backup test loaded." else "Last backup test \u00b7 team-chosen threshold (10 s); the manager sets it for their own site. Transfer time measures how many seconds it takes to switch to backup power.",
                  quiet = TRUE, value_class = if (over) "bbm-over" else NULL)
       )
     )
@@ -660,39 +660,36 @@ server <- function(input, output, session) {
       } else {
         "No baseline mean yet"
       }
-      tags$div(
-        class = "bbm-fridge h-100",
-        style = sprintf("--bbm-edge:%s;", a$status_color),
-        bslib::card(
-          fill = FALSE,
-          bslib::card_header(
-            class = "d-flex justify-content-between align-items-center",
-            tags$strong(fridge_label(a$fridge_id)), status_badge(a)
-          ),
-          plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "170px"),
-          tags$div(class = "text-muted small mb-2", mean_note),
-          tags$div(
-            class = "row text-center small g-1 mb-2",
-            tags$div(class = "col-4", tags$div(class = "bbm-label", "Blood units"), tags$div(class = "bbm-figure", a$blood_units)),
-            tags$div(class = "col-4", tags$div(class = "bbm-label", "Ppk"), tags$div(class = "bbm-figure", fmt_num(a$ppk, 2))),
-            tags$div(class = "col-4", tags$div(class = "bbm-label", "Priority \u00b7 RPN"),
-                     tags$div(class = "bbm-figure", sprintf("%s \u00b7 %s", ordinal(rank_of[[a$fridge_id]]), a$rpn)))
-          ),
-          tags$p(class = "mb-0 small text-muted", a$flag_sentence)
-        )
+      bslib::card(
+        fill = FALSE,
+        bslib::card_header(
+          class = "d-flex justify-content-between align-items-center",
+          tags$strong(a$fridge_id), status_badge(a)
+        ),
+        plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "90px"),
+        tags$div(
+          class = "row text-center small g-1 mb-2",
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
+          tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
+        ),
+        tags$p(class = "text-muted small mb-1",
+               paste("Blood units are the bags stored. Ppk is the room between this",
+                     "fridge's readings and the nearer of 1 °C or 6 °C, counted in",
+                     "sigmas. Out of spec in is the forecast time until the fitted line",
+                     "reaches 1 °C or 6 °C.")),
+        tags$p(class = "small mb-1",
+               sprintf(paste("Risk priority number: severity %d × occurrence %d × urgency %d = %d.",
+                             "Severity is the bag count banded 1 to 10, occurrence is the worst",
+                             "special-cause pattern that fired, and urgency is how soon the forecast",
+                             "reaches 1 °C or 6 °C. Higher acts first."),
+                       a$severity, a$occurrence, a$urgency, a$rpn)),
+        tags$p(class = "mb-0 small", a$flag_sentence)
       )
     })
     do.call(bslib::layout_columns,
             c(list(fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 4)), unname(cards)))
-  })
-
-  observe({
-    for (a_id in names(analyses())) {
-      local({
-        id <- a_id
-        output[[paste0("spark_", safe_id(id))]] <- renderPlotly(sparkline_plot(analyses()[[id]], dark()))
-      })
-    }
   })
 
   # ---- Fridge Detail
