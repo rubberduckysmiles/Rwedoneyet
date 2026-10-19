@@ -27,7 +27,7 @@ Prints `WORKFLOW OK` when the ten-hour example matches SPEC.md section 4.
 | `testme.R` | Starts the app on http://127.0.0.1:5763. |
 | `workflow.R` | Checks the known-answer numbers, then runs fridge F01 from `data/readings.csv` through `freeze_baseline`. |
 | `manifestme.R` | Writes `manifest.json` on this machine. Run `Rscript app/manifestme.R` from the repo root after the app files change. Do not run it in GitHub Actions. |
-| `deployme.R` | Local publish stub. The live publish is the GitHub Actions workflow, which uses the committed manifest. |
+| `deployme.R` | Publishes this folder to Posit Connect from your machine with `rsconnect`, from the committed `manifest.json`. It reads `CONNECT_SERVER` and `CONNECT_API_KEY` from the environment or the gitignored `.env`, refuses to run without them, and never prints or stores them in the repo. The GitHub Actions workflow stays the main publish path and will overwrite what this publishes. |
 
 ## Published app
 

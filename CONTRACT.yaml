@@ -623,9 +623,9 @@ tasks:
   - id: H-20
     title: "app/deployme.R publishes from a developer machine, or refuses clearly"
     points: "protects the deploy: the four-script contract needs a working local publish, and no secret may reach a file"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["app/deployme.R", "app/README.md"]
     notes: >
       app/deployme.R is still stop("Posit Connect publish is a later task.")
@@ -643,7 +643,7 @@ tasks:
       cleanly; and git grep -i "api_key" finds no literal key in it, only
       Sys.getenv. app/README.md's four-scripts table describes a real publish,
       not a stub.
-    result: ""
+    result: "app/deployme.R is a real publish. It refuses to run without credentials, reading CONNECT_SERVER and CONNECT_API_KEY only from the environment or the gitignored .env, then publishes app/ from the committed manifest to the workflow's own content name rubberduckysmiles-Rwedoneyet-shiny via addServer + connectApiUser + deployApp; the key is never printed and never written into the repo. Quoted: with both variables unset Rscript app/deployme.R exited 1 printing 'Error: Missing CONNECT_SERVER and CONNECT_API_KEY. ...'; with only CONNECT_SERVER set it exited 1 printing 'Error: Missing CONNECT_API_KEY.'; neither run reached rsconnect, so neither attempted a deploy. Rscript -e \"invisible(parse('app/deployme.R'))\" printed PARSED OK. git grep -in api_key -- app/deployme.R printed four hits and every one is the variable name - the comment, the name comparison, the needed vector and Sys.getenv - no literal key. app/README.md's four-scripts table now describes a real publish instead of a stub. deployme.R is not in the bundle (manifest still lists 16 files), so no checksum changed; testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854."
 
   - id: H-21
     title: "manifestme.R must not rewrite the platform off 4.5.2"
