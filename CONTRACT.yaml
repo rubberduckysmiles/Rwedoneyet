@@ -601,9 +601,9 @@ tasks:
   - id: H-19
     title: "hi_friends.md handoff note brought back to the truth"
     points: "tool depth: the note a new teammate reads first must not send them to finished tasks"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["hi_friends.md"]
     notes: >
       H-16 corrected hi_friends.md to name H-12, H-13, H-14 and H-08 as open and
@@ -618,7 +618,7 @@ tasks:
       No line of hi_friends.md still calls H-12, H-13 or H-14 open or quotes
       PASS 810; the suite number it quotes is the one that run printed; and the
       ledger reference says H-08 is the only open task.
-    result: ""
+    result: "Handoff note current. The opening line now says H-01 through H-07 and H-09 through H-18 are done and that H-08 is the only task left and is a person, not a commit; the stale 'Temp title!!' line is gone. The built table gained rows for H-09, H-10, H-11/H-12, H-13, H-14, H-15 and H-16/H-17/H-18 and quotes the suite as FAIL 0 | WARN 0 | SKIP 0 | PASS 854 in place of PASS 810. The ledger reference reads 'Open: H-08 only', and 'What is left' says the same with the Friday October 23 2026 3:00 PM ET deadline. A new line records that the scenario sets come from data/make_scenarios.R, are described in data/README.md, and do not go into app/data/ or the manifest. Quoted: a grep for PASS 810, 'still todo', 'still open', 'Open: H-12', 'H-12, H-13' and 'H-14 are' returned no lines, and testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854 after the edit."
 
   - id: H-20
     title: "app/deployme.R publishes from a developer machine, or refuses clearly"
