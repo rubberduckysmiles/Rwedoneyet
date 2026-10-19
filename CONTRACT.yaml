@@ -648,9 +648,9 @@ tasks:
   - id: H-21
     title: "manifestme.R must not rewrite the platform off 4.5.2"
     points: "reproducibility: the committed manifest fingerprints a 4.5.2 machine and this laptop runs 4.6.1"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["app/manifestme.R", "app/README.md"]
     notes: >
       app/manifest.json pins "platform": "4.5.2", the R version on the Connect
@@ -658,11 +658,11 @@ tasks:
       author's machine is 4.6.1, and rsconnect::writeManifest() records the
       running R, so one careless Rscript app/manifestme.R would move the deploy
       to 4.6.1 and re-derive every package version. manifestme.R should read the
-      committed platform, compare it with getRversion() major.minor, and refuse
+      committed platform, compare it with the running R version, and refuse
       before writing when they differ, printing both values and saying what to do.
     definition_of_done: >
       Rscript app/manifestme.R on this 4.6.1 machine refuses before writing, and
       the md5 of app/manifest.json is unchanged after the run; in a scratch copy
       the override path still writes a manifest, and app/README.md states the
       platform rule in one line.
-    result: ""
+    result: "manifestme.R now guards the platform. It reads the committed platform, compares it with this machine's R version and refuses before writing when they differ, so this 4.6.1 laptop cannot move the bundle off 4.5.2 by accident; ALLOW_PLATFORM_CHANGE=1 overrides deliberately. Quoted: Rscript app/manifestme.R printed 'Error: This machine runs R 4.6.1 but app/manifest.json pins platform 4.5.2, the R on the Connect server.' and exited 1, and app/manifest.json's md5 was 4242A54E58D103355A90F9B99EC54C2B before and after the run, so nothing was written. In a scratch copy of app/, with ALLOW_PLATFORM_CHANGE=1 it printed 'Wrote app/manifest.json at platform 4.6.1 (was 4.5.2)' and the copy's platform became 4.6.1; a second run with no override, pinned and running now both 4.6.1, printed 'Wrote app/manifest.json at platform 4.6.1 (was 4.6.1)' and exited 0. The real app/manifest.json still reports platform 4.5.2, 16 files, no checksum mismatch, and app/README.md's manifestme row states the rule and the override. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854."
