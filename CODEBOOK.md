@@ -49,15 +49,15 @@
 - `app/manifest.json`: Bundles deployed files (hand-refreshed; checksums must match LF-normalized MD5).
 - `app/data/`: CSVs copied for deployment.
 - `tests/`: Assertions (including captions, generator, RPN product, sd-chart display-only, etc).
-- `data/`: Source CSVs + `make_data.R` (synthetic; seeds 5300/5301).
+- `data/`: Source CSVs + `make_data.R` and `make_scenarios.R` (synthetic; seeds 5300/5301). Scenario folders `scenario_one_bad/` and `scenario_one_good/` hold alternate `readings.csv` sets with copied `inventory.csv` and `generator_log.csv`.
 - `demo/`: Demo outputs and README.
 - `docs/`: Event docs (criteria, prompts, schedule, agents, tools).
 
 ## Data variables (three CSVs)
 
-`readings.csv`: fridge_id, timestamp (YYYY-MM-DD HH:MM:SS, 15-min), temp_c (°C), door_open (0/1), on_generator (0/1).
-`inventory.csv`: fridge_id, blood_type (O+,A+,B+,AB+,O-,A-,B-,AB-), blood_units (count). Display-only for badges/capability.
-`generator_log.csv`: date (YYYY-MM-DD), transfer_time_sec (seconds). Team-chosen 10 s threshold applies.
+`readings.csv`: fridge_id, timestamp (YYYY-MM-DD HH:MM:SS, 15-min), temp_c (°C), door_open (0/1), on_generator (0/1). Scenario variants in `data/scenario_one_*/*` match the same schema.
+`inventory.csv`: fridge_id, blood_type (O+,A+,B+,AB+,O-,A-,B-,AB-), blood_units (count). Display-only for badges/capability. (Same in scenario folders.)
+`generator_log.csv`: date (YYYY-MM-DD), transfer_time_sec (seconds). Team-chosen 10 s threshold applies. (Same in scenario folders.)
 
 ## Key notes
 

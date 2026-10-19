@@ -24,6 +24,9 @@ Safe storage range for red blood cells: **1 to 6 °C**.
 | `readings.csv` | 4032 (6 fridges x 672) + 1 header | One temperature reading every 15 minutes per fridge, 2026-10-01 00:00:00 through 2026-10-07 23:45:00. |
 | `inventory.csv` | 40 + 1 header | How many red-cell bags are in each fridge, one row per fridge per blood type. |
 | `generator_log.csv` | 30 + 1 header | One backup-generator transfer test per day, 2026-09-07 through 2026-10-06. |
+| `make_scenarios.R` | n/a | Generates two alternative readings sets used in demos/reports. |
+| `scenario_one_bad/` | folder | Alternative set: five healthy fridges (F01–F05) and one failing fridge (F06 drifts to ~5–6 °C), plus copies of inventory and generator log. |
+| `scenario_one_good/` | folder | Alternative set: one healthy fridge (F01) and five failing fridges (F02 drift low-temp, F03 door-open spikes, F04 blackout with generator, F05 flatlined sensor, F06 drifting higher), plus copies of inventory and generator log. |
 
 ## `readings.csv`
 
