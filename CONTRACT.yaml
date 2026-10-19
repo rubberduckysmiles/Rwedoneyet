@@ -857,3 +857,85 @@ tasks:
       prints WORKFLOW OK with unchanged numbers; and all 16 manifest checksums
       match their files.
     result: "Bank of Bloody Mary is now the name in all 19 places the old one appeared, across 13 files: README.md (3), Demo.md (2), SPEC.md (1), app/README.md (2), demo/README.md (1), hi_friends.md (3), docs/plan.md (1) and the line-1 comment of app/app.R, app/qc.R, app/deployme.R, app/testme.R, data/make_scenarios.R and demo/show_numbers.R. The hi_friends.md fix includes the false claim that the live page title was ColdChain Monitor: a logged-out request now returns HTTP 200 with <title>Bank of Bloody Mary</title>, which is what that sentence says. Quoted: git grep -i coldchain matches only CONTRACT.yaml, this task's own notes plus the historical H-07 result left as written, and the first line of README.md is '# Bank of Bloody Mary'. Demo.md is CP1252, not UTF-8, so the rename was written back in the same encoding, byte for byte apart from the new name. app/app.R and app/qc.R are both in the published bundle, so their two checksums moved: app.R from a98f4c5e643039d79e2ce15e5dcc8229 to 0326a21ebea9fd0724cf4fdf4e96dff3 and qc.R from 02771dddcfcdf1cfb1b6c50567d07650 to 11fa215164145e7015f968dfed0fe475, refreshed by hand as md5 of the LF-normalised bytes; all 16 checksums match their files, platform still 4.5.2. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974, app/workflow.R printed WORKFLOW OK, and demo/show_numbers.R printed DEMO OK with n=30 center=7.550 lower=1.270 upper=13.830 transfer=48 seconds, so no published number moved."
+
+  - id: H-28
+    title: "Stop the badge crying wolf: act on the last day, and never on one lone flag"
+    points: "the graded core: the tool must rank the fridge that really needs this shift"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["app/R/monitor.R", "app/app.R", "app/manifest.json", "demo/alert_rate.R", "tests/test-scenarios.R", "README.md", "docs/plan.md", "demo/README.md", "data/README.md", "hi_friends.md"]
+    notes: >
+      H-26 measured five aggregation rules and the team chose rec_run on
+      2026-10-19: the badge acts on the last 24 subgroups only, the same window
+      that already decides which bags are at risk; red needs an out-of-range
+      reading in that day or two test-1 points in a row; amber needs two flags in
+      the day, or Cpk < 1, or a forecast crossing within 12 hours. Measured on
+      200 healthy simulated fridges: needing action falls from 92.0% (27.5% red)
+      to 15.5% (0% red), a real drift and a real step stay 100% red, and on the
+      committed files needing action goes 6/6 to 4/6 (demo), 5/6 to 2/6 (bad
+      set) and 5/6 to 2/6 (good set, still F02 amber and F06 red). The accepted
+      cost: the demo's F04 blackout is on 2026-10-06, more than a day before the
+      last reading, so F04 goes green - which makes the badge agree with the bag
+      count, because units_at_risk already uses that same 24-hour window and
+      already reports F04 with 0 bags at risk.
+      Work, in this order: change the badge block in app/R/monitor.R and delete
+      whatever the new rule leaves unused (any_flag_post and test1_post look like
+      candidates - grep app/app.R and tests/ before removing anything); update
+      what app/app.R says about why a fridge is amber, if it says anything; then
+      the documents that state the rule or print its numbers - README.md (the
+      badge table row for amber and the sentence about a range flag making a
+      fridge amber), docs/plan.md, demo/README.md and data/README.md. Two
+      paragraphs are also wrong on their own terms and belong to this edit:
+      demo/README.md line 36 and hi_friends.md line 57 blame non-independence for
+      F01's amber, and H-25 measured lag-1 at about 0.02, so the cause was
+      multiple testing; under the new rule F01 is green anyway. Re-point
+      demo/alert_rate.R at the new rule: the shipped rule becomes rec_run, so the
+      self-check in its section 3 must compare that (and relabel the old rule as
+      the previous one, keeping its 92.0% as the baseline). Update
+      tests/test-scenarios.R: the per-fridge verdict expectations move, and the
+      limitation test becomes the property the team now wants - a healthy fleet
+      mostly green with no reds, and a simulated real drift 100% red. Refresh the
+      manifest checksums for every bundled file that changes, by hand, md5 of the
+      LF-normalised bytes, the H-24 mechanic.
+    definition_of_done: >
+      app/R/monitor.R implements the rule above and nothing else about the
+      statistics changes; Rscript demo/alert_rate.R prints 'every fridge agrees
+      with the shipped badge'; Rscript demo/show_numbers.R prints DEMO OK and
+      app/workflow.R prints WORKFLOW OK; the per-fridge Cpk, Ppk, RPN, hours and
+      generator numbers in demo/README.md are unchanged, while the badge column
+      and the needing-action count are the re-measured ones; testthat prints 0
+      failures, with the scenario test asserting the new verdicts and the
+      healthy-fleet/drift property; README.md, docs/plan.md, demo/README.md,
+      data/README.md and hi_friends.md state the shipped rule and the measured
+      numbers rather than the old ones; git grep finds no statement of the old
+      rule left behind; all 16 manifest checksums match; and the live app's
+      Overview shows the new counts.
+    result: ""
+
+  - id: H-29
+    title: "Make Demo.md readable on GitHub, and point demo/README.md at the alert-rate script"
+    points: "5 - Tool Documentation: a judge reads Demo.md on GitHub"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["Demo.md", "demo/README.md"]
+    notes: >
+      Demo.md is the only file in this repo that is not UTF-8: 12 bytes of
+      Windows-1252 (en dashes, an em dash, degree signs, a multiplication sign
+      and a plus-or-minus) in a file GitHub serves as UTF-8, so a reader sees
+      replacement characters wherever the write-up says 1-6 C or writes a
+      degree sign. Rewrite it as UTF-8, identical text otherwise: decode the
+      bytes as cp1252, encode the same text as UTF-8, and confirm a diff against
+      HEAD touches only the lines that held those 12 bytes. Then add one short
+      block to demo/README.md pointing at demo/alert_rate.R - the H-26 script
+      that applies the shipped badge rule and four alternatives to simulated
+      fridges and to the three committed readings files - saying what to run and
+      what it prints.
+    definition_of_done: >
+      Demo.md is valid UTF-8 with no replacement characters, and every dash,
+      degree sign, multiplication sign and plus-or-minus it always meant is now
+      the right character; its diff against HEAD changes only the lines that
+      contained those bytes; demo/README.md describes demo/alert_rate.R and what
+      it prints; testthat still prints 0 failures.
+    result: ""
