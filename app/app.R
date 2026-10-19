@@ -318,7 +318,7 @@ generator_plots <- function(g, dark) {
   }
   ind <- ind %>%
     layout(shapes = shapes,
-           annotations = list(list(x = 1, xref = "paper", y = 10, yref = "y", text = "10 s limit", showarrow = FALSE,
+           annotations = list(list(x = 1, xref = "paper", y = 10, yref = "y", text = "10 s threshold", showarrow = FALSE,
                                    xanchor = "right", yanchor = "bottom")),
            xaxis = list(title = "Test number (in date order)"), yaxis = list(title = "Transfer time (s)"),
            title = list(text = "Individuals chart", font = list(size = 14))) %>%
@@ -363,7 +363,10 @@ ui <- bslib::page_navbar(
       sidebar = bslib::sidebar(
         selectInput("fridge", "Fridge", choices = character(0)),
         dateRangeInput("dates", "Date range"),
-        checkboxInput("zone_lines", "Show zone lines (1 and 2 sigma)", value = TRUE)
+        checkboxInput("zone_lines", "Show zone lines (1 and 2 standard errors)", value = TRUE),
+        tags$p(class = "text-muted small mb-0",
+               paste("Zone lines mark 1 and 2 standard errors out from the center line:",
+                     "shading for where the points usually fall. They are not control limits."))
       ),
       bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
       bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
@@ -384,13 +387,29 @@ ui <- bslib::page_navbar(
     uiOutput("capability_top"),
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, lg = 6),
-      bslib::card(bslib::card_header("Baseline readings against the spec"), plotlyOutput("hist_chart", height = "320px")),
-      bslib::card(bslib::card_header("Rolling 24-hour Ppk"), plotlyOutput("rolling_chart", height = "320px"))
+      bslib::card(
+        bslib::card_header("Baseline readings against the spec"),
+        tags$p(class = "text-muted small mb-0",
+               paste("Bars are the baseline readings. The lines at 1 \u00B0C and 6 \u00B0C are",
+                     "the spec limits for stored red cells, with 3.5 \u00B0C as the target between",
+                     "them. Control limits come from the process itself and are drawn on the",
+                     "X-bar chart on the Fridge Detail page.")),
+        plotlyOutput("hist_chart", height = "320px")
+      ),
+      bslib::card(
+        bslib::card_header("Rolling 24-hour Ppk"),
+        tags$p(class = "text-muted small mb-0",
+               paste("Ppk recomputed over the trailing 96 readings - 24 hours at 15-minute",
+                     "intervals - at each point, using only that window's own spread. It needs",
+                     "at least 24 hours of data. A falling line means the fridge is getting",
+                     "worse now, whatever the baseline says.")),
+        plotlyOutput("rolling_chart", height = "320px")
+      )
     )
   ),
 
   bslib::nav_panel(
-    "Generator",
+    "Backup generator",
     uiOutput("generator_note"),
     bslib::card(plotlyOutput("gen_ind_chart", height = "320px"), full_screen = TRUE),
     bslib::card(plotlyOutput("gen_mr_chart", height = "260px"), full_screen = TRUE)
@@ -402,7 +421,7 @@ ui <- bslib::page_navbar(
       col_widths = bslib::breakpoints(sm = 12, md = 4),
       fileInput("up_readings", "Readings (fridge_id, timestamp, temp_c, door_open, on_generator)", accept = ".csv"),
       fileInput("up_inventory", "Inventory (fridge_id, blood_type, blood_units)", accept = ".csv"),
-      fileInput("up_generator", "Generator log (date, transfer_time_sec)", accept = ".csv")
+      fileInput("up_generator", "Backup generator log (date, transfer_time_sec)", accept = ".csv")
     ),
     actionButton("load_demo", "Load demo data", class = "btn-primary mb-3"),
     uiOutput("data_status"),
@@ -410,7 +429,7 @@ ui <- bslib::page_navbar(
       title = "Preview",
       bslib::nav_panel("Readings", DT::DTOutput("preview_readings")),
       bslib::nav_panel("Inventory", DT::DTOutput("preview_inventory")),
-      bslib::nav_panel("Generator log", DT::DTOutput("preview_generator"))
+      bslib::nav_panel("Backup generator log", DT::DTOutput("preview_generator"))
     )
   ),
 
@@ -423,17 +442,17 @@ ui <- bslib::page_navbar(
 server <- function(input, output, session) {
   demo <- load_demo_data(data_dir)
   rv <- reactiveValues(
-    readings = demo$readings, inventory = demo$inventory, generator = demo$generator,
+    readings = demo$readings, inventory = demo$inventory, backup_generator = demo$generator,
     from_readings = if (is.null(demo$readings)) "none" else "demo data",
     from_inventory = if (is.null(demo$inventory)) "none" else "demo data",
-    from_generator = if (is.null(demo$generator)) "none" else "demo data"
+    from_backup_generator = if (is.null(demo$generator)) "none" else "demo data"
   )
 
   dark <- reactive(identical(input$color_mode, "dark"))
 
   analyses <- reactive(analyze_all(rv$readings, rv$inventory))
-  summary_numbers <- reactive(overview_summary(analyses(), rv$generator))
-  gen <- reactive(generator_analysis(rv$generator))
+  summary_numbers <- reactive(overview_summary(analyses(), rv$backup_generator))
+  gen <- reactive(generator_analysis(rv$backup_generator))
 
   # ---- Data page
   try_upload <- function(file, prepare, slot, label) {
@@ -447,7 +466,7 @@ server <- function(input, output, session) {
   }
   observeEvent(input$up_readings, try_upload(input$up_readings, prepare_readings, "readings", "readings"))
   observeEvent(input$up_inventory, try_upload(input$up_inventory, prepare_inventory, "inventory", "inventory"))
-  observeEvent(input$up_generator, try_upload(input$up_generator, prepare_generator, "generator", "generator log"))
+  observeEvent(input$up_generator, try_upload(input$up_generator, prepare_generator, "backup_generator", "backup generator log"))
 
   observeEvent(input$load_demo, {
     d <- load_demo_data(data_dir)
@@ -457,14 +476,14 @@ server <- function(input, output, session) {
     }
     rv$readings <- d$readings
     rv$inventory <- d$inventory
-    rv$generator <- d$generator
-    rv$from_readings <- rv$from_inventory <- rv$from_generator <- "demo data"
+    rv$backup_generator <- d$generator
+    rv$from_readings <- rv$from_inventory <- rv$from_backup_generator <- "demo data"
     showNotification("Demo data loaded.", type = "message")
   })
 
   output$data_status <- renderUI({
     tags$p(class = "text-muted",
-           sprintf("Readings: %s. Inventory: %s. Generator log: %s.", rv$from_readings, rv$from_inventory, rv$from_generator))
+           sprintf("Readings: %s. Inventory: %s. Backup generator log: %s.", rv$from_readings, rv$from_inventory, rv$from_backup_generator))
   })
 
   preview_table <- function(df) {
@@ -475,7 +494,7 @@ server <- function(input, output, session) {
   }
   output$preview_readings <- DT::renderDT(preview_table(rv$readings))
   output$preview_inventory <- DT::renderDT(preview_table(rv$inventory))
-  output$preview_generator <- DT::renderDT(preview_table(rv$generator))
+  output$preview_generator <- DT::renderDT(preview_table(rv$backup_generator))
 
   # ---- Fridge pickers
   observeEvent(analyses(), {
@@ -511,10 +530,15 @@ server <- function(input, output, session) {
       col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 3),
       bslib::value_box("Fridges needing action", s$needing_action, tags$small(sprintf("of %d fridges (red or amber)", length(analyses())))),
       bslib::value_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), tags$small("out of range now, or flagged in the last 24 h")),
-      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2), tags$small("mean of the baseline Ppk values")),
-      bslib::value_box("Last generator transfer",
+      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2),
+                       tags$small(paste("mean of each fridge's Ppk - the room between its readings",
+                                        "and the nearer of 1 \u00B0C or 6 \u00B0C, counted in sigmas.",
+                                        "1.0 or more is capable."))),
+      bslib::value_box("Last backup generator transfer",
                        if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s"),
-                       tags$small(if (is.na(s$last_transfer)) "no generator log loaded" else "limit is 10 s"))
+                       tags$small(if (is.na(s$last_transfer)) "no backup generator log loaded" else
+                         paste("seconds from power loss to picking up the load; the 10 s line is a",
+                               "threshold the team chose, and you set it for your own site")))
     )
   })
 
@@ -536,6 +560,17 @@ server <- function(input, output, session) {
           tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
           tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
         ),
+        tags$p(class = "text-muted small mb-1",
+               paste("Blood units are the bags stored. Ppk is the room between this",
+                     "fridge's readings and the nearer of 1 \u00B0C or 6 \u00B0C, counted in",
+                     "sigmas. Out of spec in is the forecast time until the fitted line",
+                     "reaches 1 \u00B0C or 6 \u00B0C.")),
+        tags$p(class = "small mb-1",
+               sprintf(paste("Risk priority number: severity %d \u00D7 occurrence %d \u00D7 urgency %d = %d.",
+                             "Severity is the bag count banded 1 to 10, occurrence is the worst",
+                             "special-cause pattern that fired, and urgency is how soon the forecast",
+                             "reaches 1 \u00B0C or 6 \u00B0C. Higher acts first."),
+                       a$severity, a$occurrence, a$urgency, a$rpn)),
         tags$p(class = "mb-0 small", a$flag_sentence)
       )
     })
@@ -622,14 +657,58 @@ server <- function(input, output, session) {
     }
     lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
       sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
+
+    # Backup generator statistics: a projection of what generator_analysis() already
+    # computed. Nothing is derived here, so these match the Backup generator page.
+    gs <- generator_stats(gen())
+    gen_card <- if (is.null(gs)) {
+      bslib::card(fill = FALSE,
+        tags$h5(class = "mb-1", "Backup generator"),
+        tags$p(class = "text-muted small mb-0",
+               "No backup generator log loaded. Add one on the Data page to see the backup power statistics here."))
+    } else {
+      switchover <- if (is.na(gs$in_control)) "cannot say" else
+        if (gs$in_control) "in control" else "investigate"
+      bslib::card(fill = FALSE,
+        tags$h5(class = "mb-1", "Backup generator"),
+        tags$p(class = "text-muted small",
+          paste("The backup generator carries the fridges through a mains outage.",
+                "Transfer time is the number that matters: the seconds between the",
+                "power failing and the backup generator picking up the load, and during that",
+                "gap nothing is cooling, so the bags are exposed for exactly that long.")),
+        bslib::layout_columns(
+          fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 3),
+          bslib::value_box("Last transfer", fmt_num(gs$last, 1),
+                           tags$small("seconds, from the most recent test")),
+          bslib::value_box("Typical transfer", fmt_num(gs$typical, 1),
+                           tags$small("seconds, the center of the chart")),
+          bslib::value_box("Tests beyond the limits", sprintf("%d", gs$beyond),
+                           tags$small(sprintf("of %d tests run", gs$n))),
+          bslib::value_box("Switchover", switchover,
+                           tags$small(if (gs$assessable) "every test inside the limits" else gs$message))
+        ),
+        tags$p(class = "text-muted small mb-0",
+               "The 10 s line is a threshold the team chose, not a control limit."))
+    }
+
     tagList(
       bslib::layout_columns(
         fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
-        bslib::value_box("Cpk (short-term sigma)", fmt_num(a$cpk, 2)),
-        bslib::value_box("Ppk (overall sigma)", fmt_num(a$ppk, 2)),
-        bslib::value_box("Gap (Cpk minus Ppk)", fmt_num(a$gap, 2))
+        bslib::value_box("Cpk (short-term sigma)", fmt_num(a$cpk, 2),
+          tags$small(paste("Room left if this fridge keeps holding temperature the way it",
+                           "has been holding it hour to hour. Above 1.0 is room to spare;",
+                           "below 1.0 it cannot reliably stay in spec."))),
+        bslib::value_box("Ppk (overall sigma)", fmt_num(a$ppk, 2),
+          tags$small(paste("The same room measured across the whole baseline, drift and",
+                           "hour-to-hour shifts included. This is the long-run number."))),
+        bslib::value_box("Gap (Cpk minus Ppk)", fmt_num(a$gap, 2),
+          tags$small(paste("A stability signal, not a score. Near zero means the fridge is",
+                           "steady. Clearly positive means it holds temperature within an",
+                           "hour but wanders between hours, which is a stability problem",
+                           "rather than a capability problem.")))
       ),
-      bslib::card(fill = FALSE, tags$h4(class = "mb-1", sentence), tags$p(class = "text-muted small mb-0", lag_text))
+      bslib::card(fill = FALSE, tags$h4(class = "mb-1", sentence), tags$p(class = "text-muted small mb-0", lag_text)),
+      gen_card
     )
   })
   output$hist_chart <- renderPlotly(histogram_plot(cap(), dark()))
@@ -639,11 +718,11 @@ server <- function(input, output, session) {
   output$generator_note <- renderUI({
     g <- gen()
     if (is.null(g)) {
-      return(tags$div(class = "alert alert-warning", "No generator log loaded. Add one on the Data page. The Overview box shows a dash until then."))
+      return(tags$div(class = "alert alert-warning", "No backup generator log loaded. Add one on the Data page. The Overview box shows a dash until then."))
     }
     msg <- g$limits$message
     tags$p(class = "text-muted", if (nzchar(msg)) msg else
-      sprintf("%d transfer tests. The solid dark line is the 10 second limit.", g$n))
+      sprintf("%d transfer tests. The solid dark line marks the 10 s threshold the team chose for their own site.", g$n))
   })
   gen_plots <- reactive({
     g <- gen()
@@ -651,11 +730,11 @@ server <- function(input, output, session) {
     generator_plots(g, dark())
   })
   output$gen_ind_chart <- renderPlotly({
-    validate(need(!is.null(gen()), "No generator log loaded."))
+    validate(need(!is.null(gen()), "No backup generator log loaded."))
     gen_plots()$individuals
   })
   output$gen_mr_chart <- renderPlotly({
-    validate(need(!is.null(gen()), "No generator log loaded."))
+    validate(need(!is.null(gen()), "No backup generator log loaded."))
     gen_plots()$moving_range
   })
 }
