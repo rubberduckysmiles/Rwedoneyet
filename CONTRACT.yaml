@@ -394,8 +394,8 @@ tasks:
       (urgency stands in for detection), Cpk uses sigma_short, Ppk uses sigma_overall,
       variances divide by n-1, limits frozen after 48h (<25 no limits), blood type
       is display only and its distribution is a chosen synthetic input (renormalized),
-      generator stats are a projection copied from generator_analysis. README.md links
-      to CODEBOOK.md and data/README.md links back; tests still PASS 848."
+      generator stats are a projection copied from generator_analysis. Links maintained;
+      tests PASS 848, DEMO OK, WORKFLOW OK."
 
   - id: H-14
     title: "User and use case, stated one way everywhere"
