@@ -349,10 +349,9 @@ tasks:
   - id: H-13
     title: "CODEBOOK.md - every file, every variable, and the constants that were chosen"
     points: "codebook: one file that says what each file and variable means, and which numbers are computed versus chosen"
-    status: in_progress
+    status: done
     owner: "agent"
     started_at: "2026-10-19"
-    owns: ["CODEBOOK.md", "data/README.md", "README.md"]
     notes: >
       data/README.md already codes every data file, column, unit and the four
       fridge scenarios. What is missing is the code side: every file in the repo
