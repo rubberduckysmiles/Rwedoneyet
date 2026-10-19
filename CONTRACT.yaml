@@ -786,9 +786,9 @@ tasks:
   - id: H-26
     title: "Measure a fix for the alert rate before anyone changes the shipping rule"
     points: "the graded core: a monitor that flags a healthy fleet has little value"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["demo/alert_rate.R"]
     notes: >
       H-25 measured the problem and deliberately did not fix it:
@@ -817,7 +817,7 @@ tasks:
       at least two candidate rules on simulated healthy fridges, and the same
       comparison for the three committed readings files; nothing under app/ and
       no existing document changes; testthat still prints 0 failures.
-    result: ""
+    result: "demo/alert_rate.R applies five aggregation rules to the analysis objects analyze_fridge() already returns, changing nothing under app/, and re-runs the shipped rule as a self-check that printed 'every fridge agrees with the shipped badge' for all 18 fridges. Quoted, 200 simulated fridges per population, seed 5300: HEALTHY - current 27.5% red, 64.5% amber, 92.0% needing action; run2 0% red, 66.0% amber, 66.0%; last24 0% red, 38.5% amber, 38.5%; rec_run (24 subgroups, two flags) 0% red, 15.5% amber, 15.5%; rec_2d (48 subgroups, two flags) 0% red, 38.5% amber, 38.5%. A real drift and a real step are 100% red under all five rules, so detection is not what gets traded away. On the committed files, needing action goes demo 6/6 under current to 4/6 under last24 and rec_run and 5/6 under rec_2d; scenario_one_bad 5/6 to 2/6; scenario_one_good 5/6 to 2/6 under rec_run, with F02 amber (Cpk 0.537, nothing out of range) and F06 red (readings above 6 C) under every rule. The cost is the window: the demo's F04 blackout runs 2026-10-06 14:00 to 16:00, more than a day before the last reading, so last24 and rec_run drop F04 to green while rec_2d keeps it red - and the shipped rule already reports F04 with 0 bags at risk, so rec_run makes the badge agree with the bag count. RECOMMENDATION for the team to decide: rec_run, the 24-hour window that needs two flags, cutting false alarms from 92.0% to 15.5% without losing any planted signal, and restoring badge-versus-bags agreement; rec_2d is the alternative if a resolved incident one to two days old should stay red, at 38.5%. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974, and git status showed nothing changed outside demo/alert_rate.R and this ledger. Changing the shipped rule is proposed as H-28, not done here."
 
   - id: H-27
     title: "Adopt Bank of Bloody Mary as the product name in every document"
