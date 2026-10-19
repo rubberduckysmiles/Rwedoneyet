@@ -1,4 +1,4 @@
-# ColdChain Monitor: a Shiny dashboard for the blood-bank operations manager.
+# ColdChain Monitor: a Shiny dashboard for the blood-bank lab manager.
 # This file only draws screens. Every number comes from a function in app/R/ (see monitor.R).
 # Start it from the repo root with:  Rscript app/testme.R
 
@@ -34,6 +34,20 @@ time_text <- function(t) format(t, "%Y-%m-%d %H:%M:%S")
 `%||%` <- function(a, b) if (is.null(a)) b else a
 
 safe_id <- function(id) gsub("[^A-Za-z0-9_]", "_", id)
+
+# Screen name only. The files and the statistics keep the id, such as F02.
+fridge_label <- function(id) {
+  ifelse(grepl("^F[0-9]+$", id), paste0("Fridge ", sub("^F", "", id)), as.character(id))
+}
+
+ordinal <- function(n) {
+  n <- as.integer(n)
+  suffix <- ifelse(n %% 100 %in% c(11L, 12L, 13L), "th",
+                   ifelse(n %% 10 == 1L, "st",
+                          ifelse(n %% 10 == 2L, "nd",
+                                 ifelse(n %% 10 == 3L, "rd", "th"))))
+  paste0(n, suffix)
+}
 
 status_badge <- function(a) {
   text_color <- if (a$status == "amber") "#212529" else "#FFFFFF"
@@ -94,22 +108,79 @@ baseline_shape <- function(d) {
 
 # ---- Plots ---------------------------------------------------------------------------------------
 
-sparkline_plot <- function(a) {
+sparkline_plot <- function(a, dark = FALSE) {
   d <- utils::tail(a$subgroups, 48)
-  if (nrow(d) == 0) return(empty_plot("no hourly data"))
-  p <- plot_ly(d, x = ~time, y = ~mean, type = "scatter", mode = "lines",
-               line = list(color = a$status_color, width = 2),
-               text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text")
+  if (nrow(d) == 0) return(empty_plot("no hourly data", dark))
+  fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
   shapes <- list()
-  if (a$has_limits) {
+  annotations <- list()
+  y_title <- "Hourly mean (\u00B0C)"
+  y_range <- NULL
+  if (isTRUE(a$has_limits)) {
     lim <- a$baseline$limits$xbar
-    shapes <- list(hline(lim$lcl, "rgba(128,128,128,0.7)", "dot"), hline(lim$ucl, "rgba(128,128,128,0.7)", "dot"))
+    # The band is the baseline mean plus or minus 3 standard errors.
+    shapes <- list(
+      list(type = "rect", xref = "paper", x0 = 0, x1 = 1, yref = "y",
+           y0 = lim$lcl, y1 = lim$ucl,
+           fillcolor = "rgba(100,120,150,0.16)", line = list(width = 0), layer = "below"),
+      hline(lim$lcl, "rgba(128,128,128,0.75)", "dot"),
+      hline(lim$ucl, "rgba(128,128,128,0.75)", "dot")
+    )
+    label <- function(y, text, anchor) {
+      list(x = 1, xref = "paper", xanchor = "right", y = y, yanchor = anchor,
+           text = text, showarrow = FALSE, font = list(size = 10, color = fg))
+    }
+    annotations <- list(label(lim$ucl, "+3 SE", "bottom"), label(lim$lcl, "-3 SE", "top"))
+    if (!is.null(a$baseline$center) && !is.null(a$baseline$sigma_short)) {
+      y_title <- sprintf("Mean %.2f \u00B0C, sd %.2f \u00B0C", a$baseline$center, a$baseline$sigma_short)
+    }
+    span <- lim$ucl - lim$lcl
+    pad <- if (isTRUE(span > 0)) span * 0.28 else 0.1
+    y_range <- c(min(c(d$mean, lim$lcl), na.rm = TRUE) - pad,
+                 max(c(d$mean, lim$ucl), na.rm = TRUE) + pad)
   }
-  p %>%
-    layout(shapes = shapes, margin = list(l = 2, r = 2, t = 2, b = 2),
-           xaxis = list(visible = FALSE), yaxis = list(visible = FALSE),
+  plot_ly(d, x = ~time, y = ~mean, type = "scatter", mode = "lines",
+          line = list(color = a$status_color, width = 2),
+          text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text") %>%
+    layout(shapes = shapes, annotations = annotations,
+           margin = list(l = 68, r = 8, t = 8, b = 36),
+           xaxis = list(title = "", nticks = 3, tickformat = "%b %d",
+                        tickfont = list(size = 10, color = fg)),
+           yaxis = list(title = list(text = y_title, font = list(size = 11, color = fg)),
+                        tickfont = list(size = 10, color = fg), range = y_range),
            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
     config(displayModeBar = FALSE)
+}
+
+# The fridge the lab manager should open first: highest priority among red and amber.
+shift_status <- function(list_a) {
+  if (length(list_a) == 0) return(NULL)
+  action <- list_a[vapply(list_a, function(a) a$status %in% c("red", "amber"), logical(1))]
+  if (length(action) == 0) return("Every fridge can be left this shift.")
+  ids <- names(action)
+  rpns <- vapply(action, function(a) a$rpn, numeric(1))
+  top <- action[[ids[order(-rpns, ids)[1]]]]
+  latest <- utils::tail(top$readings$temp_c, 1)
+  situation <- if (isTRUE(latest > SPEC_HIGH)) {
+    "already above 6 \u00B0C"
+  } else if (isTRUE(latest < SPEC_LOW)) {
+    "already below 1 \u00B0C"
+  } else if (top$status == "red") {
+    "act this shift"
+  } else {
+    "watch this shift"
+  }
+  sprintf("Go to %s first. %s bags, %s.",
+          fridge_label(top$fridge_id), format(top$blood_units, big.mark = ","), situation)
+}
+
+stat_box <- function(label, value, note, quiet = FALSE, value_class = NULL) {
+  tags$div(
+    class = "h-100 p-3 border rounded-3 bg-body",
+    tags$div(class = "bbm-label", label),
+    tags$div(class = paste(if (quiet) "bbm-number-quiet" else "bbm-number", value_class), value),
+    tags$div(class = "text-muted small mt-2", note)
+  )
 }
 
 xbar_plot <- function(a, keep, zone_lines, dark) {
@@ -165,7 +236,7 @@ xbar_plot <- function(a, keep, zone_lines, dark) {
 
   p %>%
     layout(shapes = shapes, yaxis = list(title = "Hourly mean (\u00B0C)"), xaxis = list(title = ""),
-           title = list(text = "X-bar chart (gray = baseline hours, limits frozen)", font = list(size = 14))) %>%
+           title = list(text = "X-bar chart. Limits are the baseline mean \u00b1 3 standard errors. Gray marks the first 48 hours.", font = list(size = 14))) %>%
     themed(dark)
 }
 
@@ -344,17 +415,26 @@ generator_plots <- function(g, dark) {
 # ---- UI ------------------------------------------------------------------------------------------
 
 ui <- bslib::page_navbar(
-  title = "ColdChain Monitor",
+  title = "Bank of Bloody Mary",
   id = "main_nav",
   theme = theme,
   fillable = FALSE,
 
   bslib::nav_panel(
     "Overview",
-    tags$p(class = "text-muted mb-1", "Limits are frozen from the first 48 hours. Later hours are judged against those limits."),
-    tags$p(class = "text-muted small", "How to read the badge: red means act this shift, amber means watch, green means leave it."),
+    tags$style(HTML("
+      .bbm-label { font-size: 0.68rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--bs-secondary-color); }
+      .bbm-number { font-size: 2.6rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
+      .bbm-number-quiet { font-size: 1.45rem; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; }
+      .bbm-over { color: #D64045; }
+      .bbm-figure { font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; }
+      .bbm-fridge .card { border-left: 3px solid var(--bbm-edge); }
+      .bbm-status { background: var(--bs-body-bg); border: 3px solid var(--bs-border-color); }
+    ")),
+    uiOutput("status_card"),
     uiOutput("overview_boxes"),
-    uiOutput("fridge_cards")
+    uiOutput("fridge_cards"),
+    tags$p(class = "text-muted small mt-2 mb-0", "Control limits are locked from each fridge's first 48 hours. Priority = how many bags \u00d7 how bad the signal \u00d7 how soon, each scored from 1 to 10.")
   ),
 
   bslib::nav_panel(
@@ -480,8 +560,9 @@ server <- function(input, output, session) {
   # ---- Fridge pickers
   observeEvent(analyses(), {
     ids <- sort(names(analyses()))
-    updateSelectInput(session, "fridge", choices = ids, selected = if (isTRUE(input$fridge %in% ids)) input$fridge else ids[1])
-    updateSelectInput(session, "cap_fridge", choices = ids, selected = if (isTRUE(input$cap_fridge %in% ids)) input$cap_fridge else ids[1])
+    choices <- stats::setNames(ids, fridge_label(ids))
+    updateSelectInput(session, "fridge", choices = choices, selected = if (isTRUE(input$fridge %in% ids)) input$fridge else ids[1])
+    updateSelectInput(session, "cap_fridge", choices = choices, selected = if (isTRUE(input$cap_fridge %in% ids)) input$cap_fridge else ids[1])
   }, ignoreNULL = FALSE)
 
   detail <- reactive({
@@ -501,42 +582,82 @@ server <- function(input, output, session) {
   })
 
   # ---- Overview
+  output$status_card <- renderUI({
+    if (length(analyses()) == 0) return(NULL)
+    tags$div(
+      class = "bbm-status rounded-3 p-3 px-4 mb-3",
+      tags$p(class = "mb-3 fw-semibold", style = "font-size: 1.2rem;",
+             tags$span(class = "me-2", "Status:"),
+             shift_status(analyses())),
+      tags$div(
+        tags$span(class = "badge rounded-pill me-2", style = "background-color:#2E9E6B;color:#FFFFFF;", "Leave it"),
+        tags$span(class = "badge rounded-pill me-2", style = "background-color:#E8A33D;color:#212529;", "Watch this shift"),
+        tags$span(class = "badge rounded-pill", style = "background-color:#D64045;color:#FFFFFF;", "Act this shift")
+      )
+    )
+  })
+
   output$overview_boxes <- renderUI({
     if (length(analyses()) == 0) {
       return(tags$div(class = "alert alert-info", "No readings loaded. Open the Data page and press Load demo data."))
     }
     s <- summary_numbers()
-    bslib::layout_columns(
-      fill = FALSE,
-      col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 3),
-      bslib::value_box("Fridges needing action", s$needing_action, tags$small(sprintf("of %d fridges (red or amber)", length(analyses())))),
-      bslib::value_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), tags$small("out of range now, or flagged in the last 24 h")),
-      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2), tags$small("mean of the baseline Ppk values")),
-      bslib::value_box("Last generator transfer",
-                       if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s"),
-                       tags$small(if (is.na(s$last_transfer)) "no generator log loaded" else "limit is 10 s"))
+    over <- isTRUE(s$last_transfer > 10)
+    transfer <- if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s")
+    tagList(
+      bslib::layout_columns(
+        fill = FALSE,
+        col_widths = bslib::breakpoints(sm = 12, md = 6),
+        stat_box("Fridges needing action", s$needing_action, sprintf("of %d fridges, red or amber", length(analyses()))),
+        stat_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), "out of range now, or flagged in the last 24 h")
+      ),
+      bslib::layout_columns(
+        fill = FALSE, class = "mt-3",
+        col_widths = bslib::breakpoints(sm = 12, md = 6),
+        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.", quiet = TRUE),
+        stat_box("Last backup test", transfer,
+                 if (is.na(s$last_transfer)) "No backup test loaded." else "Last backup test \u00b7 wanted under 10 s",
+                 quiet = TRUE, value_class = if (over) "bbm-over" else NULL)
+      )
     )
   })
 
   output$fridge_cards <- renderUI({
     list_a <- analyses()
     if (length(list_a) == 0) return(NULL)
+    ids <- names(list_a)
+    rpns <- vapply(list_a, function(a) a$rpn, numeric(1))
+    rank_order <- order(-rpns, ids)
+    rank_of <- integer(length(ids))
+    rank_of[rank_order] <- seq_along(ids)
+    names(rank_of) <- ids
+    list_a <- list_a[order(ids)]
     cards <- lapply(list_a, function(a) {
-      bslib::card(
-        fill = FALSE,
-        bslib::card_header(
-          class = "d-flex justify-content-between align-items-center",
-          tags$strong(a$fridge_id), status_badge(a)
-        ),
-        plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "90px"),
-        tags$div(
-          class = "row text-center small g-1 mb-2",
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
-        ),
-        tags$p(class = "mb-0 small", a$flag_sentence)
+      mean_note <- if (isTRUE(a$has_limits) && !is.null(a$baseline$center)) {
+        sprintf("Mean %.2f \u00B0C", a$baseline$center)
+      } else {
+        "No baseline mean yet"
+      }
+      tags$div(
+        class = "bbm-fridge h-100",
+        style = sprintf("--bbm-edge:%s;", a$status_color),
+        bslib::card(
+          fill = FALSE,
+          bslib::card_header(
+            class = "d-flex justify-content-between align-items-center",
+            tags$strong(fridge_label(a$fridge_id)), status_badge(a)
+          ),
+          plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "170px"),
+          tags$div(class = "text-muted small mb-2", mean_note),
+          tags$div(
+            class = "row text-center small g-1 mb-2",
+            tags$div(class = "col-4", tags$div(class = "bbm-label", "Blood units"), tags$div(class = "bbm-figure", a$blood_units)),
+            tags$div(class = "col-4", tags$div(class = "bbm-label", "Ppk"), tags$div(class = "bbm-figure", fmt_num(a$ppk, 2))),
+            tags$div(class = "col-4", tags$div(class = "bbm-label", "Priority \u00b7 RPN"),
+                     tags$div(class = "bbm-figure", sprintf("%s \u00b7 %s", ordinal(rank_of[[a$fridge_id]]), a$rpn)))
+          ),
+          tags$p(class = "mb-0 small text-muted", a$flag_sentence)
+        )
       )
     })
     do.call(bslib::layout_columns,
@@ -547,7 +668,7 @@ server <- function(input, output, session) {
     for (a_id in names(analyses())) {
       local({
         id <- a_id
-        output[[paste0("spark_", safe_id(id))]] <- renderPlotly(sparkline_plot(analyses()[[id]]))
+        output[[paste0("spark_", safe_id(id))]] <- renderPlotly(sparkline_plot(analyses()[[id]], dark()))
       })
     }
   })
@@ -570,7 +691,7 @@ server <- function(input, output, session) {
     at_risk <- sum(bt$units_at_risk)
     risk_text <- if (at_risk > 0) {
       sprintf("%d of %d bags are at risk, because %s is %s.", round(at_risk), round(total),
-              a$fridge_id, sub("^[a-z]+: ", "", a$status_label))
+              fridge_label(a$fridge_id), sub("^[a-z]+: ", "", a$status_label))
     } else {
       sprintf("All %d bags are inside the spec right now.", round(total))
     }
@@ -616,9 +737,9 @@ server <- function(input, output, session) {
   output$capability_top <- renderUI({
     a <- cap()
     sentence <- if (a$capable_sentence %in% CAPABLE_SENTENCES) {
-      paste0(a$fridge_id, " is ", a$capable_sentence, ".")
+      paste0(fridge_label(a$fridge_id), " is ", a$capable_sentence, ".")
     } else {
-      paste0(a$fridge_id, ": ", a$capable_sentence)
+      paste0(fridge_label(a$fridge_id), ": ", a$capable_sentence)
     }
     lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
       sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
