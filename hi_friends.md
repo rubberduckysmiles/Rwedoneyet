@@ -36,6 +36,7 @@ Read them in this order. The later files assume the earlier ones.
 | H-14 | The user and use case stated one way everywhere: the blood-bank operations manager, at shift change. |
 | H-15 | The generator statistics strip and plain captions on the Capability tab. |
 | H-16, H-17, H-18 | Hygiene and accuracy: the stray `README copy.md` is gone, the Switchover caption now agrees with the Switchover value, and the two scenario datasets are described from measurement. |
+| H-22 | The two scenario readings sets are back to the team's hand-tuned versions (the names are labels, not descriptions: the bad set has nothing failing, and the good set has no textbook failure), and `data/README.md` describes both from measurement. `make_scenarios.R` now writes its own generated pair into `data/scenario_generated/` and cannot overwrite the committed sets. |
 
 The known-answer check is ten hours of temperatures whose hour means are all exactly 3.5 °C. Sigma short is 0.2569046516. Cpk is 3.2437456007. Ppk is 3.6984390192. The gap is negative on that set because the hour means do not move. Constant data, every reading 3.5 °C, makes Cpk and Ppk missing. They are never infinity. `Rscript app/workflow.R` prints `WORKFLOW OK` when this still matches.
 
@@ -76,7 +77,7 @@ Rscript -e 'testthat::test_dir("tests")'
 
 If you regenerate the CSVs with `Rscript data/make_data.R`, copy the three files into `app/data/` as well. The published app only receives the `app/` folder. Then run `Rscript app/manifestme.R` on your own machine and commit the new `manifest.json`. Do not let GitHub Actions rewrite the manifest.
 
-The two scenario sets under `data/scenario_one_bad/` and `data/scenario_one_good/` come from `Rscript data/make_scenarios.R`, are described in [data/README.md](data/README.md) with their measured numbers, and are **not** used by the app, so they do not go into `app/data/` and they do not change the manifest.
+The two scenario sets under `data/scenario_one_bad/` and `data/scenario_one_good/` are the team's hand-tuned versions, restored by H-22, and are described in [data/README.md](data/README.md) with their measured numbers. They do **not** come from `Rscript data/make_scenarios.R`; that script writes a different pair of sets into `data/scenario_generated/` (not committed) and never overwrites these two. The scenario sets are **not** used by the app, so they do not go into `app/data/` and they do not change the manifest.
 
 ## What is left
 

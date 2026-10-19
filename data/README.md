@@ -1,16 +1,20 @@
 # Codebook for `data/`
 
-**All data in this folder are synthetic.** They were invented by a script, not measured on any real
-refrigerator, bag of blood, or generator. Seed 5300 (blood types, 5301). Regenerate every CSV, byte for
-byte, from the repo root with:
+**All data in this folder are synthetic.** They were invented, not measured on any real
+refrigerator, bag of blood, or generator. Seed 5300 (blood types, 5301). Regenerate the three CSVs at
+the top level, byte for byte, from the repo root with:
 
 ```
 Rscript data/make_data.R
 ```
 
-`data/make_data.R` generates the three CSVs that sit directly in `data/`; `data/make_scenarios.R`
-generates the two scenario sets in the subfolders. Those two scripts are the only generators, and the
-CSVs are their output. Do not edit any CSV by hand.
+`data/make_data.R` is the generator for `readings.csv`, `inventory.csv` and `generator_log.csv`, and
+those three are its output. Do not edit them by hand.
+
+The two scenario folders are the exception. Their `readings.csv` files came from a hand-tuned pass,
+are not reproducible from any script here, and are described, with their measured numbers, under
+[The two scenario sets](#the-two-scenario-sets) below. `data/make_scenarios.R` generates a *different*
+pair of sets into `data/scenario_generated/` (not committed) and never overwrites the two folders.
 
 **Baseline window (quotable):** The baseline is the first 48 hours, 2026-10-01 00:00:00 through
 2026-10-02 23:45:00, in which every fridge has common-cause variation only (no planted failure), and the
@@ -26,9 +30,9 @@ Safe storage range for red blood cells: **1 to 6 °C**.
 | `readings.csv` | 4032 (6 fridges x 672) + 1 header | One temperature reading every 15 minutes per fridge, 2026-10-01 00:00:00 through 2026-10-07 23:45:00. |
 | `inventory.csv` | 40 + 1 header | How many red-cell bags are in each fridge, one row per fridge per blood type. |
 | `generator_log.csv` | 30 + 1 header | One backup-generator transfer test per day, 2026-09-07 through 2026-10-06. |
-| `make_scenarios.R` | n/a | Generates the two scenario readings sets below, from the same builders as `make_data.R`. |
-| `scenario_one_bad/` | folder | Alternative set: `readings.csv` plus copies of `inventory.csv` and `generator_log.csv`. Five healthy fridges (F01–F05) and one failing fridge (F06, a drift). |
-| `scenario_one_good/` | folder | Alternative set: `readings.csv` plus copies of the other two files. One healthy fridge (F01) and five failing fridges: F02 and F06 drift, F03 door spikes, F04 blackout, F05 flatlined sensor. |
+| `make_scenarios.R` | n/a | Generates a pair of alternative readings sets into `data/scenario_generated/`, which is not committed. It does not write the two folders below. |
+| `scenario_one_bad/` | folder | Committed set: `readings.csv` plus copies of `inventory.csv` and `generator_log.csv`. All six fridges are common-cause noise; nothing fails in this file. |
+| `scenario_one_good/` | folder | Committed set: `readings.csv` plus copies of the other two files. Every fridge behaves differently: one near 1.5 °C, one warm near 5 °C, one with half the usual spread, and door/generator flags that never move the temperature. |
 
 ## `readings.csv`
 
@@ -97,73 +101,79 @@ which is part of its normal routine and runs on every day including the baseline
 | F05 | Flatlined sensor | `temp_c` is exactly 3.50 on every reading (144 readings). The stuck value is inside 1 to 6 °C on purpose: a range check alone would not catch it. | 2026-10-04 00:00 to 2026-10-05 11:45 |
 | F06 | Healthy, normal defrost | Common-cause noise, plus one scheduled defrost a day: the single 02:00:00 reading is the noise draw + 0.40 °C. The other three readings in that hour are ordinary, so the hourly mean rises about 0.10 °C. A manager can see it and still treat the fridge as healthy. | 02:00:00 every day, 2026-10-01 to 2026-10-07 |
 
-## The two scenario sets (what was planted)
+## The two scenario sets
 
-`data/scenario_one_bad/readings.csv` and `data/scenario_one_good/readings.csv` are complete
+`data/scenario_one_bad/readings.csv` and `data/scenario_one_good/readings.csv` are committed
 alternatives to `readings.csv`: same six fridges, same 672 readings each, same columns, same
 2026-10-01 to 2026-10-07 window. Each folder also holds a copy of `inventory.csv` and
 `generator_log.csv`, unchanged from `data/`, so a fridge's bag count and the backup-power log are the
-same whichever readings file is in use. Both come from `Rscript data/make_scenarios.R`, which is the
-only generator of these two files.
+same whichever readings file is in use.
 
 **The running dashboard does not load these.** The app reads `data/readings.csv` (or its own copy in
 `app/data/`); nothing under `app/` mentions a scenario folder. They are alternative readings sets for
-working the statistics by hand or for a future second demo.
+working the statistics by hand.
 
-The measurements below are from the committed files, so they double as the check that the script
-still reproduces them. Regenerate and compare with:
+**Where they came from.** These two files are the team's hand-tuned pass from the `data-updates`
+branch (commits `08641c9` for the bad set, `68a6804` for the good set), and they are the versions the
+team chose to keep. They are **not** reproducible from any script in this repo. `data/make_scenarios.R`
+builds a *different* pair of sets — one drifting fridge, and five fridges with drift used twice — and
+writes them into `data/scenario_generated/`, a folder that is not committed, so running that script
+cannot overwrite the two files described here. The tables below are measured from the committed files,
+not derived from a script.
 
-```
-Rscript data/make_scenarios.R
-```
+Treat the names as labels, not descriptions. The point of both sets is that a range check (1 to 6 °C)
+and a control chart disagree about which fridge needs attention.
 
-### `scenario_one_bad/readings.csv` — one failing fridge
+### `scenario_one_bad/readings.csv`
 
-Baseline noise is the same everywhere: normal, mean 3.5 °C, standard deviation 0.15 °C, rounded to
-2 decimals. F06 drifts: mean rises 0.035 °C per hour from 2026-10-03 00:00:00, the same wear the
-main `readings.csv` gives F02.
+Despite the name, nothing fails in this file. All six fridges show common-cause noise only: normal,
+mean about 3.5 °C, standard deviation about 0.15 °C, rounded to 2 decimals, no door or generator
+flags. It is the negative control for the other two readings files: a monitor that finds something
+here is finding a false alarm.
 
-| Fridge | What is planted | Measured mean | Measured max | Readings above 6 °C | Door / generator flags |
-|---|---|---|---|---|---|
-| F01 | Healthy, common cause only | 3.49 | 3.90 | 0 | 0 / 0 |
-| F02 | Healthy, common cause only | 3.49 | 4.02 | 0 | 0 / 0 |
-| F03 | Healthy, common cause only | 3.51 | 3.94 | 0 | 0 / 0 |
-| F04 | Healthy, common cause only | 3.50 | 3.97 | 0 | 0 / 0 |
-| F05 | Healthy, common cause only | 3.50 | 3.89 | 0 | 0 / 0 |
-| F06 | Drifting compressor (wear) | 5.01 | 7.99 | 193, first at 2026-10-05 18:15 | 0 / 0 |
+| Fridge | Mean | SD | Min | Max | Readings outside 1–6 °C | Door / generator flags |
+|---|---|---|---|---|---|---|
+| F01 | 3.49 | 0.152 | 3.09 | 3.91 | 0 | 0 / 0 |
+| F02 | 3.50 | 0.148 | 3.09 | 3.91 | 0 | 0 / 0 |
+| F03 | 3.51 | 0.155 | 3.09 | 3.91 | 0 | 0 / 0 |
+| F04 | 3.51 | 0.149 | 3.09 | 3.91 | 0 | 0 / 0 |
+| F05 | 3.50 | 0.145 | 3.10 | 3.91 | 0 | 0 / 0 |
+| F06 | 3.50 | 0.155 | 3.09 | 3.91 | 0 | 0 / 0 |
 
-Only F06 leaves the 1 to 6 °C range, and it stays out: from 2026-10-05 18:15 to the end of the week.
+### `scenario_one_good/readings.csv`
 
-### `scenario_one_good/readings.csv` — one healthy fridge
+Also a misleading name: this is not a set of textbook failures but a set of awkward fridges, which is
+the harder test. Every fridge behaves differently, and only one of them ever leaves 1–6 °C.
 
-The inverse set: F01 is the only fridge left alone, and the other five each carry a planted failure.
-Four different failure modes are used and the drift is used twice, because the generator has four
-builders.
+| Fridge | What it does | Mean | SD | Min | Max | Readings outside 1–6 °C | Door / generator flags |
+|---|---|---|---|---|---|---|---|
+| F01 | Runs with about half the standard spread | 3.50 | 0.075 | 3.15 | 3.84 | 0 | 0 / 0 |
+| F02 | Sits near the 1 °C lower limit all week | 1.50 | 0.313 | 1.00 | 2.00 | 0 — 618 of 672 readings are under 2 °C, none is under 1 °C | 0 / 0 |
+| F03 | Door openings logged, temperature never responds | 3.55 | 0.169 | 3.08 | 4.00 | 0 | 8 / 0 |
+| F04 | Blackout logged, temperature never responds | 3.53 | 0.129 | 3.18 | 3.88 | 0 | 0 / 5 |
+| F05 | Very tight, neither stuck flat nor drifting | 3.50 | 0.066 | 3.32 | 3.68 | 0 | 0 / 0 |
+| F06 | Runs warm, widest spread of the six | 4.99 | 0.556 | 3.51 | 6.40 | 16 readings above 6 °C, 2026-10-01 09:30 through 2026-10-07 10:30 | 0 / 0 |
 
-| Fridge | What is planted | Measured mean | Measured max | Readings above 6 °C | Door / generator flags |
-|---|---|---|---|---|---|
-| F01 | Healthy, common cause only | 3.51 | 3.99 | 0 | 0 / 0 |
-| F02 | Drifting compressor (wear) | 5.00 | 8.00 | 195, first at 2026-10-05 18:30 | 0 / 0 |
-| F03 | Door-open spikes, eight readings | 3.54 | 7.80 | 8, first at 2026-10-04 08:00 | 8 / 0 |
-| F04 | Blackout with a slow generator | 3.53 | 7.40 | 3, first at 2026-10-06 14:30 | 0 / 5 |
-| F05 | Flatlined sensor, 144 readings at exactly 3.50 °C | 3.50 | 3.93 | 0 | 0 / 0 |
-| F06 | Drifting compressor (wear) | 5.00 | 7.95 | 196, first at 2026-10-05 18:15 | 0 / 0 |
+Three things are deliberate. **F02** hugs the lower limit for the whole week: no reading is out of
+range, so a range check sees nothing, and only a chart of the level finds a fridge running 2 °C below
+the others. **F03 and F04** carry door and generator flags in `door_open` and `on_generator` while the
+temperature never responds, so the only evidence is the operator's log, not the readings. **F05** has
+less than half everyone else's spread — the opposite of a widening chart, and what a settling sensor
+looks like. **F06** is the only fridge whose readings leave 1–6 °C, and it does so intermittently
+rather than by drifting away.
 
-The two drifting fridges cross 6 °C in the late afternoon of 2026-10-05 and stay above it. F03's
-eight spikes and F04's blackout also cross 6 °C, but only for the readings shown: F05 never leaves
-the range at all, which is the point of that fridge — a range check alone cannot see a sensor stuck
-at 3.50 °C.
+### Checksums
 
-### Reproducing them
-
-Both files are written by `data/make_scenarios.R` and nothing else. Run it from the repo root and the
-two files come back byte for byte. Their MD5 sums (line endings normalised to LF, which is what
-`git` stores) are:
+Line endings normalised to LF, which is what `git` stores:
 
 | File | MD5 |
 |---|---|
-| `data/scenario_one_bad/readings.csv` | `0696b9ea91c2eedae93d65af736578f2` |
-| `data/scenario_one_good/readings.csv` | `edf520a1bed60149845cc47dd55cded` |
+| `data/scenario_one_bad/readings.csv` | `a6ade73760933721328b87202e00c8a6` |
+| `data/scenario_one_good/readings.csv` | `2617a7f5de9679533f8d5890d0a4fb12` |
+
+For contrast, the pair `data/make_scenarios.R` writes into `data/scenario_generated/` hashes to
+`0696b9ea91c2eedae93d65af736578f2` and `edf520a1bed60149845cc47dd55cded`. Different files — and a
+quick way to confirm the generator never touches the committed sets.
 
 ## Collecting this for real
 

@@ -1,13 +1,21 @@
-# make_scenarios.R - generates two additional readings.csv variants for the ColdChain Monitor.
+# make_scenarios.R - generates a pair of alternative readings sets for the ColdChain Monitor.
 # Run from the repo root:  Rscript data/make_scenarios.R
-# Outputs (each folder also receives a copy of inventory.csv and generator_log.csv):
-#   data/scenario_one_bad/readings.csv   F01-F05 healthy, F06 drifts (one failing fridge)
-#   data/scenario_one_good/readings.csv  F01 healthy; F02 and F06 drift, F03 door spikes,
-#                                        F04 blackout, F05 flatline (five failing fridges,
-#                                        four distinct failure modes - drift is used twice)
-# The builders mirror the planted failures in data/readings.csv. This script is the only
-# generator of these two files: run it twice and you get the same bytes. data/README.md
-# carries the per-fridge numbers and the two checksums, so a reader can check that claim.
+#
+# Output (each folder also receives a copy of inventory.csv and generator_log.csv):
+#   data/scenario_generated/one_bad/readings.csv    F01-F05 healthy, F06 drifts
+#                                                   (one failing fridge)
+#   data/scenario_generated/one_good/readings.csv   F01 healthy; F02 and F06 drift,
+#                                                   F03 door spikes, F04 blackout,
+#                                                   F05 flatline (five failing fridges,
+#                                                   four distinct failure modes - drift
+#                                                   is used twice)
+#
+# That output is NOT what the committed data/scenario_one_bad/ and
+# data/scenario_one_good/ hold. Those two sets are the team's hand-tuned ones, described
+# with their measured numbers in data/README.md; they are not reproducible from this
+# script. This script writes into data/scenario_generated/, its own folder, and never
+# overwrites the two committed sets. Set seed 5300, so two runs here give the same bytes.
+# The builders mirror the planted failures in data/readings.csv.
 
 set.seed(5300)
 
@@ -73,14 +81,24 @@ build_readings <- function(modes) {
   out
 }
 
+# Write one generated set into its own folder. Nothing here touches the two committed
+# scenario sets, which came from a hand-tuned pass and are described in data/README.md.
+out_dir <- "data/scenario_generated"
+write_scenario <- function(name, frame) {
+  d <- file.path(out_dir, name)
+  dir.create(d, showWarnings = FALSE, recursive = TRUE)
+  write.csv(frame, file.path(d, "readings.csv"), row.names = FALSE, quote = FALSE)
+  file.copy("data/inventory.csv", file.path(d, "inventory.csv"), overwrite = TRUE)
+  file.copy("data/generator_log.csv", file.path(d, "generator_log.csv"), overwrite = TRUE)
+}
+
 # Scenario 1: only one non-functioning fridge (F06 drifts), rest healthy.
 modes_one_bad <- list(
   F01 = mode_healthy, F02 = mode_healthy, F03 = mode_healthy,
   F04 = mode_healthy, F05 = mode_healthy, F06 = mode_drift
 )
 r1 <- build_readings(modes_one_bad)
-dir.create("data/scenario_one_bad", showWarnings = FALSE, recursive = TRUE)
-write.csv(r1, "data/scenario_one_bad/readings.csv", row.names = FALSE, quote = FALSE)
+write_scenario("one_bad", r1)
 
 # Scenario 2: only one functioning fridge (F01 healthy), the other five failing with four
 # distinct modes between them. Drift is reused for F06 because there are only four builders.
@@ -93,13 +111,7 @@ modes_one_good <- list(
   F06 = mode_drift
 )
 r2 <- build_readings(modes_one_good)
-dir.create("data/scenario_one_good", showWarnings = FALSE, recursive = TRUE)
-write.csv(r2, "data/scenario_one_good/readings.csv", row.names = FALSE, quote = FALSE)
+write_scenario("one_good", r2)
 
-# Copy inventory and generator log into both scenario folders.
-for (d in c("data/scenario_one_bad", "data/scenario_one_good")) {
-  file.copy("data/inventory.csv", file.path(d, "inventory.csv"), overwrite = TRUE)
-  file.copy("data/generator_log.csv", file.path(d, "generator_log.csv"), overwrite = TRUE)
-}
-
-cat("Wrote scenario CSVs.\n")
+cat("Wrote the generated scenario CSVs under", out_dir, "\n")
+cat("The committed sets in data/scenario_one_bad/ and data/scenario_one_good/ are untouched.\n")

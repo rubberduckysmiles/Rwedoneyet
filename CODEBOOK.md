@@ -49,7 +49,7 @@
 - `app/manifest.json`: Bundles deployed files (hand-refreshed; checksums must match LF-normalized MD5).
 - `app/data/`: CSVs copied for deployment.
 - `tests/`: Assertions (including captions, generator, RPN product, sd-chart display-only, etc).
-- `data/`: Source CSVs + `make_data.R` and `make_scenarios.R` (synthetic; seeds 5300/5301). Scenario folders `scenario_one_bad/` and `scenario_one_good/` hold alternate `readings.csv` sets with copied `inventory.csv` and `generator_log.csv`.
+- `data/`: Source CSVs + `make_data.R` (synthetic; seeds 5300/5301). The two scenario folders `scenario_one_bad/` and `scenario_one_good/` hold hand-tuned alternate `readings.csv` sets (with copied `inventory.csv` and `generator_log.csv`); they are not reproducible from `make_scenarios.R`, which writes a different generated pair into `data/scenario_generated/`. See [`data/README.md`](data/README.md).
 - `demo/`: Demo outputs and README.
 - `docs/`: Event docs (criteria, prompts, schedule, agents, tools).
 

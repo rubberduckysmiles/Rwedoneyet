@@ -670,10 +670,10 @@ tasks:
   - id: H-22
     title: "Restore the two scenario readings sets from the data-updates pass"
     points: "team decision: keep the scenario CSVs that were tuned by hand, not the generator's output"
-    status: todo
-    owner: ""
-    started_at: ""
-    owns: ["data/scenario_one_bad/readings.csv", "data/scenario_one_good/readings.csv", "data/README.md", "data/make_scenarios.R", "hi_friends.md"]
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["data/scenario_one_bad/readings.csv", "data/scenario_one_good/readings.csv", "data/README.md", "data/make_scenarios.R", "hi_friends.md", "CODEBOOK.md"]
     notes: >
       By team decision the two scenario sets go back to the versions on main at
       2e03233 (the pass that came in with the data-updates branch), undoing the
@@ -688,14 +688,16 @@ tasks:
       noise. The per-fridge tables and checksums in data/README.md are rewritten
       to the restored measurements, the byte-for-byte reproduction claim is
       replaced with the truth, make_scenarios.R's header stops claiming it writes
-      these files, and hi_friends.md stops saying the scenario sets come from it.
+      these files and now writes its own generated pair into data/scenario_generated/,
+      CODEBOOK.md's data/ line stops implying the script produces the committed sets,
+      and hi_friends.md stops saying the scenario sets come from it.
     definition_of_done: >
       git diff of data/scenario_one_bad/readings.csv and
       data/scenario_one_good/readings.csv against 2e03233 is empty; every
       per-fridge claim in data/README.md's scenario tables matches the restored
       files measured in R; grep finds no claim that data/make_scenarios.R
       reproduces them; Rscript -e "testthat::test_dir('tests')" still passes.
-    result: ""
+    result: "Both scenario readings sets are back to the data-updates versions the team chose to keep, and every document now tells the truth about them. Quoted: git diff of the two files against 2e03233 is empty; measured from the restored files, scenario_one_bad has all six fridges at mean 3.49-3.51, sd 0.145-0.155, min 3.09, max 3.91, no door or generator flags and nothing outside 1-6 C (nothing fails, despite the name), and scenario_one_good has F01 sd 0.075, F02 mean 1.50 with 618 of its 672 readings under 2 C and none under 1 C, F03 8 door flags with max 4.00, F04 5 generator flags with max 3.88, F05 sd 0.066, and F06 mean 4.99, sd 0.556, max 6.40 with 16 readings above 6 C from 2026-10-01 09:30 to 2026-10-07 10:30. A checker written against the README tables printed 'ALL ROWS MATCH' for both sets, and the prose counts (618 of 672, 16 readings, those two timestamps) were verified separately. make_scenarios.R now writes its generated pair into data/scenario_generated/, and its output still hashes to 0696b9ea91c2eedae93d65af736578f2 and edf520a1bed60149845cc47dd55cded, so only the destination changed; the committed sets hash a6ade73760933721328b87202e00c8a6 and 2617a7f5de9679533f8d5890d0a4fb12. A scratch run created data/scenario_generated/ and left the two committed folders alone. data/README.md, CODEBOOK.md and hi_friends.md now say the sets are not reproducible from that script. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854; app/workflow.R printed WORKFLOW OK; demo/show_numbers.R printed DEMO OK with n=30 center=7.550 lower=1.270 upper=13.830 transfer=48 seconds, so no published number moved."
 
   - id: H-23
     title: "Remove the stray tracked test.txt"
