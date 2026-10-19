@@ -310,9 +310,9 @@ tasks:
   - id: H-12
     title: "Every number on screen explained where the user meets it"
     points: "documentation: a supervisor can say what any figure on any page means without asking anyone"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: in_progress
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["SPEC.md", "app/app.R", "app/R/", "app/manifest.json", "README.md", "tests/"]
     notes: >
       Most numbers already carry a caption. Audit every value box, chart
@@ -349,9 +349,9 @@ tasks:
   - id: H-13
     title: "CODEBOOK.md - every file, every variable, and the constants that were chosen"
     points: "codebook: one file that says what each file and variable means, and which numbers are computed versus chosen"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: in_progress
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["CODEBOOK.md", "data/README.md", "README.md"]
     notes: >
       data/README.md already codes every data file, column, unit and the four
@@ -390,9 +390,9 @@ tasks:
   - id: H-14
     title: "User and use case, stated one way everywhere"
     points: "scope and user: the rubric's user-and-use-case line, consistent across SPEC, README and the app"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: in_progress
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["SPEC.md", "README.md", "app/app.R", "data/README.md"]
     notes: >
       SPEC section 2 and README line 3 both name the user, but thinly, and the

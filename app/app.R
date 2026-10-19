@@ -363,7 +363,10 @@ ui <- bslib::page_navbar(
       sidebar = bslib::sidebar(
         selectInput("fridge", "Fridge", choices = character(0)),
         dateRangeInput("dates", "Date range"),
-        checkboxInput("zone_lines", "Show zone lines (1 and 2 sigma)", value = TRUE)
+        checkboxInput("zone_lines", "Show zone lines (1 and 2 standard errors)", value = TRUE),
+        tags$p(class = "text-muted small mb-0",
+               paste("Zone lines mark 1 and 2 standard errors out from the center line:",
+                     "shading for where the points usually fall. They are not control limits."))
       ),
       bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
       bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
@@ -384,8 +387,24 @@ ui <- bslib::page_navbar(
     uiOutput("capability_top"),
     bslib::layout_columns(
       col_widths = bslib::breakpoints(sm = 12, lg = 6),
-      bslib::card(bslib::card_header("Baseline readings against the spec"), plotlyOutput("hist_chart", height = "320px")),
-      bslib::card(bslib::card_header("Rolling 24-hour Ppk"), plotlyOutput("rolling_chart", height = "320px"))
+      bslib::card(
+        bslib::card_header("Baseline readings against the spec"),
+        tags$p(class = "text-muted small mb-0",
+               paste("Bars are the baseline readings. The lines at 1 \u00B0C and 6 \u00B0C are",
+                     "the spec limits for stored red cells, with 3.5 \u00B0C as the target between",
+                     "them. Control limits come from the process itself and are drawn on the",
+                     "X-bar chart on the Fridge Detail page.")),
+        plotlyOutput("hist_chart", height = "320px")
+      ),
+      bslib::card(
+        bslib::card_header("Rolling 24-hour Ppk"),
+        tags$p(class = "text-muted small mb-0",
+               paste("Ppk recomputed over the trailing 96 readings - 24 hours at 15-minute",
+                     "intervals - at each point, using only that window's own spread. It needs",
+                     "at least 24 hours of data. A falling line means the fridge is getting",
+                     "worse now, whatever the baseline says.")),
+        plotlyOutput("rolling_chart", height = "320px")
+      )
     )
   ),
 
@@ -511,10 +530,15 @@ server <- function(input, output, session) {
       col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 3),
       bslib::value_box("Fridges needing action", s$needing_action, tags$small(sprintf("of %d fridges (red or amber)", length(analyses())))),
       bslib::value_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), tags$small("out of range now, or flagged in the last 24 h")),
-      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2), tags$small("mean of the baseline Ppk values")),
+      bslib::value_box("Average Ppk", fmt_num(s$average_ppk, 2),
+                       tags$small(paste("mean of each fridge's Ppk - the room between its readings",
+                                        "and the nearer of 1 \u00B0C or 6 \u00B0C, counted in sigmas.",
+                                        "1.0 or more is capable."))),
       bslib::value_box("Last backup generator transfer",
                        if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s"),
-                       tags$small(if (is.na(s$last_transfer)) "no backup generator log loaded" else "threshold is 10 s"))
+                       tags$small(if (is.na(s$last_transfer)) "no backup generator log loaded" else
+                         paste("seconds from power loss to picking up the load; the 10 s line is a",
+                               "threshold the team chose, and you set it for your own site")))
     )
   })
 
@@ -536,6 +560,17 @@ server <- function(input, output, session) {
           tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
           tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
         ),
+        tags$p(class = "text-muted small mb-1",
+               paste("Blood units are the bags stored. Ppk is the room between this",
+                     "fridge's readings and the nearer of 1 \u00B0C or 6 \u00B0C, counted in",
+                     "sigmas. Out of spec in is the forecast time until the fitted line",
+                     "reaches 1 \u00B0C or 6 \u00B0C.")),
+        tags$p(class = "small mb-1",
+               sprintf(paste("Risk priority number: severity %d \u00D7 occurrence %d \u00D7 urgency %d = %d.",
+                             "Severity is the bag count banded 1 to 10, occurrence is the worst",
+                             "special-cause pattern that fired, and urgency is how soon the forecast",
+                             "reaches 1 \u00B0C or 6 \u00B0C. Higher acts first."),
+                       a$severity, a$occurrence, a$urgency, a$rpn)),
         tags$p(class = "mb-0 small", a$flag_sentence)
       )
     })
