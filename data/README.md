@@ -162,6 +162,39 @@ less than half everyone else's spread — the opposite of a widening chart, and 
 looks like. **F06** is the only fridge whose readings leave 1–6 °C, and it does so intermittently
 rather than by drifting away.
 
+### What the monitor says about each set (measured)
+
+The tables above describe the files. This one is what the app makes of them: the two
+committed files run through the dashboard's own path (`load_demo_data()` then
+`analyze_all()`, plus `overview_summary()`). `tests/test-scenarios.R` asserts every
+number here, so a change to either file or to the statistics moves this table.
+
+| Set | Red | Amber | Green | Needing action | Bags reported at risk | Average Ppk |
+|---|---|---|---|---|---|---|
+| `scenario_one_bad` | none | F01, F03, F04, F05, F06 | F02 | 5 of 6 | 275 (F04 220, F06 55) | 5.42 |
+| `scenario_one_good` | F01, F06 | F02, F03, F04 | F05 | 5 of 6 | 67 (F06 55, F01 12) | 5.73 |
+
+Two rows are the point of the pair, and both come out as intended. On the good set,
+**F02** has no reading outside 1–6 °C and still has a Cpk of 0.537: the level is wrong
+while the range is fine, so the range check misses it and the chart does not. **F06** is
+the one fridge the range check does catch — 16 readings above 6 °C, 11 of them after the
+baseline — with a Cpk of 0.598.
+
+The third is a limitation, recorded rather than hidden. The bad set has **nothing outside
+1–6 °C** and the monitor still reports **5 of its 6 fridges as needing action**. No
+dependence in the readings explains that: lag-1 autocorrelation is under 0.16 on every
+fridge (about 0.02 on F01 of the demo file). The cause is the number of chances to flag —
+roughly 120 post-baseline subgroups read against 8 special-cause tests, so at a nominal
+3-sigma false-alarm rate a healthy fridge is almost sure to trip something somewhere, and
+the badge turns amber on *any* single post-baseline flag. Simulating 200 healthy
+iid-normal fridges (mean 3.5 °C, sd 0.15 °C, 672 readings each) through `analyze_fridge()`
+gives **92.0% with at least one post-baseline flag, 64.5% amber and 27.5% red**; a
+300-fridge run gave 91.7% / 62.3% / 29.3%. The eight tests are implemented correctly one
+by one — the aggregation over the whole post-baseline series is what makes "needing
+action" close to this monitor's default state on a healthy fleet. The check in
+`tests/test-scenarios.R` pins that behaviour with deliberately loose bounds, so the
+limitation stays visible in the suite instead of being rediscovered.
+
 ### Checksums
 
 Line endings normalised to LF, which is what `git` stores:

@@ -55,7 +55,7 @@
 
 ## Data variables (three CSVs)
 
-`readings.csv`: fridge_id, timestamp (YYYY-MM-DD HH:MM:SS, 15-min), temp_c (°C), door_open (0/1), on_generator (0/1). Scenario variants in `data/scenario_one_*/*` match the same schema.
+`readings.csv`: fridge_id, timestamp (YYYY-MM-DD HH:MM:SS, 15-min), temp_c (°C), door_open (0/1), on_generator (0/1). Scenario variants in `data/scenario_one_*/*` match the same schema. No statistic consumes `door_open` or `on_generator`: the loader carries both through if present and no number in the app is computed from either, so they are operator evidence, not inputs.
 `inventory.csv`: fridge_id, blood_type (O+,A+,B+,AB+,O-,A-,B-,AB-), blood_units (count). Display-only for badges/capability. (Same in scenario folders.)
 `generator_log.csv`: date (YYYY-MM-DD), transfer_time_sec (seconds). Team-chosen 10 s threshold applies. (Same in scenario folders.)
 
