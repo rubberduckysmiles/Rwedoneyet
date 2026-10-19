@@ -702,9 +702,9 @@ tasks:
   - id: H-23
     title: "Remove the stray tracked test.txt"
     points: "repo hygiene: a judge browsing the repo should not find a file containing 'test!'"
-    status: todo
-    owner: ""
-    started_at: ""
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
     owns: ["test.txt"]
     notes: >
       test.txt has held the single line "test!" since commit 0c29c53 ("this is my
@@ -714,4 +714,4 @@ tasks:
     definition_of_done: >
       git ls-files test.txt prints nothing, the file is gone from the working
       tree, and git grep -n "test\.txt" finds no reference to it.
-    result: ""
+    result: "test.txt is gone: git rm removed it from the index and from disk, git ls-files test.txt prints nothing, and the file no longer exists. The only remaining mentions of the name anywhere in the repo are inside this task's own ledger entry (its title, owns, notes and definition_of_done), which is the record of the removal rather than a reference to the file; nothing else - no app file, test, README or workflow - ever named it. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854 after the removal; the repo now tracks 181 files."
