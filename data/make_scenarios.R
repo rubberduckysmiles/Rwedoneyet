@@ -1,9 +1,13 @@
 # make_scenarios.R - generates two additional readings.csv variants for the ColdChain Monitor.
 # Run from the repo root:  Rscript data/make_scenarios.R
-# Outputs:
-#   data/scenario_one_bad/readings.csv   (5 healthy fridges + 1 failing fridge)
-#   data/scenario_one_good/readings.csv  (1 healthy fridge + 5 failing fridges, each a different failure mode)
-# Inventory and generator log are copied from data/ (unchanged).
+# Outputs (each folder also receives a copy of inventory.csv and generator_log.csv):
+#   data/scenario_one_bad/readings.csv   F01-F05 healthy, F06 drifts (one failing fridge)
+#   data/scenario_one_good/readings.csv  F01 healthy; F02 and F06 drift, F03 door spikes,
+#                                        F04 blackout, F05 flatline (five failing fridges,
+#                                        four distinct failure modes - drift is used twice)
+# The builders mirror the planted failures in data/readings.csv. This script is the only
+# generator of these two files: run it twice and you get the same bytes. data/README.md
+# carries the per-fridge numbers and the two checksums, so a reader can check that claim.
 
 set.seed(5300)
 
@@ -78,21 +82,16 @@ r1 <- build_readings(modes_one_bad)
 dir.create("data/scenario_one_bad", showWarnings = FALSE, recursive = TRUE)
 write.csv(r1, "data/scenario_one_bad/readings.csv", row.names = FALSE, quote = FALSE)
 
-# Scenario 2: only one functioning (F01 healthy), rest show different failures.
+# Scenario 2: only one functioning fridge (F01 healthy), the other five failing with four
+# distinct modes between them. Drift is reused for F06 because there are only four builders.
 modes_one_good <- list(
   F01 = mode_healthy,
   F02 = mode_drift,
   F03 = mode_door,
   F04 = mode_blackout,
   F05 = mode_flatline,
-  F06 = mode_healthy  # keep F06 healthy too? spec says only 1 functioning. Make F06 a second drift? 
+  F06 = mode_drift
 )
-# To have exactly one functioning, make F06 also a failure (defrost-healthy is still healthy-ish).
-# Use door-spike-less variant: make F06 a drift with different rate is still "drift". Instead make
-# F06 a flatline-ish? Simpler: keep 5 distinct failures by reusing modes but ensure 5 non-healthy.
-# We already have 4 distinct (drift, door, blackout, flatline). Add defrost as a 5th healthy-ish?
-# The codebook treats F06 defrost as healthy. So to have only 1 functioning, replace F06 with drift2.
-modes_one_good$F06 <- mode_drift
 r2 <- build_readings(modes_one_good)
 dir.create("data/scenario_one_good", showWarnings = FALSE, recursive = TRUE)
 write.csv(r2, "data/scenario_one_good/readings.csv", row.names = FALSE, quote = FALSE)

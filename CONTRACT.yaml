@@ -567,3 +567,102 @@ tasks:
       generator line, and app/manifest.json's app.R checksum matches the edited
       file.
     result: "Switchover caption now comes from in_control, not from whether limits could be drawn. Demo log (30 tests, center 7.55 s, UCL 13.83 s, one test at 48.0 s) now reads 'investigate' with '1 of 30 tests beyond the limits' instead of 'every test inside the limits'; an in-control fixture still reads 'every test inside the limits'. Quoted: testthat FAIL 0 | WARN 0 | SKIP 0 | PASS 854 (was 848); demo/show_numbers.R DEMO OK with n=30 center=7.550 lower=1.270 upper=13.830 transfer=48; app/workflow.R WORKFLOW OK; manifest 16 of 16 checksums match, app.R now 72c9be88f3a58cd2a665f9fe9be545d4."
+
+  - id: H-18
+    title: "Scenario datasets: the data and the description must agree"
+    points: "reproducibility: the two scenario folders are generator output and must be described as they actually are"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["data/README.md", "data/make_scenarios.R"]
+    notes: >
+      cf7b2dc regenerated both scenario readings.csv from make_scenarios.R so the
+      data is the generator's output, but two claims written into data/README.md
+      at the same time do not survive measurement. scenario_one_bad F06 drifts
+      up to 8.0 C (mean 5.01, sd 1.406), not "~5-6 C"; and scenario_one_good F02
+      drifts UPWARD (mean 5.00, max 8.00), not "low-temp". F03 door spikes (8
+      flags, max 7.80), F04 blackout (5 generator flags, max 7.40), F05 flatline
+      (144 readings stuck at 3.50) and F06 drift (max 7.95) are correct as
+      written. make_scenarios.R's header claims the five failures are "each a
+      different failure mode", which is false - F02 and F06 are both mode_drift -
+      and its F06 = mode_healthy line followed by a reassignment misleads. Also
+      data/README.md line 11 still calls make_data.R the only generator. Correct
+      the words to the measured data, and add the measured per-fridge table for
+      both sets plus the two checksums, so a reader can verify the claim.
+    definition_of_done: >
+      Rscript data/make_scenarios.R run in a scratch copy reproduces both
+      committed readings.csv byte for byte after LF normalization (md5
+      0696b9ea91c2eedae93d65af736578f2 for scenario_one_bad and
+      edf520a1bed60149845cc47dd55cded for scenario_one_good), and every
+      per-fridge claim in data/README.md's scenario rows matches that fridge's
+      measured mean, max and flag counts.
+    result: "Every scenario claim is now taken from measurement, and the new section 'The two scenario sets' carries both per-fridge tables, the out-of-spec counts and the two checksums. Quoted: F06 in scenario_one_bad has mean 5.01, max 7.99, 193 readings above 6 C from 2026-10-05 18:15 (the old text said '~5-6 C'); F02 in scenario_one_good has mean 5.00, max 8.00, 195 above 6 C (the old text said 'drift low-temp'); F03 8 door flags/max 7.80; F04 5 generator flags/max 7.40; F05 144 readings stuck at 3.50 with sd 0.140 and nothing above 6 C; F01-F05 of the bad set max 4.02 or less. data/README.md also stops calling make_data.R the only generator, and make_scenarios.R's header no longer claims five distinct failure modes (F02 and F06 are both drift) and drops the dead F06 = mode_healthy line. Reproducibility quoted: Rscript data/make_scenarios.R in a scratch copy returned md5 0696b9ea91c2eedae93d65af736578f2 (bad) and edf520a1bed60149845cc47dd55cded (good) after LF normalization, identical to the committed files, so the edited script still writes the same bytes. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 854."
+
+  - id: H-19
+    title: "hi_friends.md handoff note brought back to the truth"
+    points: "tool depth: the note a new teammate reads first must not send them to finished tasks"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["hi_friends.md"]
+    notes: >
+      H-16 corrected hi_friends.md to name H-12, H-13, H-14 and H-08 as open and
+      to quote FAILED 0 | PASS 810. H-12, H-13, H-14, H-15, H-16 and H-17 have
+      since been checked in, so the note now sends a teammate to three finished
+      tasks and quotes a suite size the suite has outgrown. Bring it current:
+      H-08 is the only open task, the suite is quoted from a run made while
+      writing the fix, and the sections that are still true - the surprising
+      F01 and F06 results, the "do not change these" list, the run commands -
+      stay.
+    definition_of_done: >
+      No line of hi_friends.md still calls H-12, H-13 or H-14 open or quotes
+      PASS 810; the suite number it quotes is the one that run printed; and the
+      ledger reference says H-08 is the only open task.
+    result: ""
+
+  - id: H-20
+    title: "app/deployme.R publishes from a developer machine, or refuses clearly"
+    points: "protects the deploy: the four-script contract needs a working local publish, and no secret may reach a file"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["app/deployme.R", "app/README.md"]
+    notes: >
+      app/deployme.R is still stop("Posit Connect publish is a later task.")
+      while testme.R, manifestme.R and workflow.R all work. GitHub Actions stays
+      the main path; this is the fast first deploy and the fallback when Actions
+      is red. Read CONNECT_SERVER and CONNECT_API_KEY from the environment only,
+      via rsconnect::connectApiUser(), never from a file, never printed. Refuse
+      with a clear message and a non-zero exit when either is missing, so a
+      teammate without the publisher key gets a sentence and no half-deploy.
+      Deploy the app folder with the committed manifest, matching the workflow's
+      content name rubberduckysmiles-Rwedoneyet-shiny.
+    definition_of_done: >
+      With the two variables unset, Rscript app/deployme.R exits non-zero after
+      naming the missing variable and attempts no deploy; app/deployme.R parses
+      cleanly; and git grep -i "api_key" finds no literal key in it, only
+      Sys.getenv. app/README.md's four-scripts table describes a real publish,
+      not a stub.
+    result: ""
+
+  - id: H-21
+    title: "manifestme.R must not rewrite the platform off 4.5.2"
+    points: "reproducibility: the committed manifest fingerprints a 4.5.2 machine and this laptop runs 4.6.1"
+    status: todo
+    owner: ""
+    started_at: ""
+    owns: ["app/manifestme.R", "app/README.md"]
+    notes: >
+      app/manifest.json pins "platform": "4.5.2", the R version on the Connect
+      server, and the published bundle must stay there. The only R on the
+      author's machine is 4.6.1, and rsconnect::writeManifest() records the
+      running R, so one careless Rscript app/manifestme.R would move the deploy
+      to 4.6.1 and re-derive every package version. manifestme.R should read the
+      committed platform, compare it with getRversion() major.minor, and refuse
+      before writing when they differ, printing both values and saying what to do.
+    definition_of_done: >
+      Rscript app/manifestme.R on this 4.6.1 machine refuses before writing, and
+      the md5 of app/manifest.json is unchanged after the run; in a scratch copy
+      the override path still writes a manifest, and app/README.md states the
+      platform rule in one line.
+    result: ""
