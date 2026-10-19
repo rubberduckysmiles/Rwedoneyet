@@ -1,7 +1,7 @@
 # Hi friends!
 
 This is the handoff for ColdChain Monitor. Temp title!!
-H-01 through H-07 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). H-08 is not started, this one will push to DevPost. Please do not mark it done until the checks below are actually run.
+H-01 through H-07, H-09, H-10, H-11 and H-15 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). Still open: H-12, H-13, H-14, and H-08 — H-08 is the last one, it pushes to Devpost. Please do not mark anything done until the checks below are actually run.
 
 The live app, with no login, is [ColdChain Monitor on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). A logged-out request returned HTTP 200 and the page title ColdChain Monitor. Access on Connect is set so anyone can open it. Leave it that way. Judges have to open it without an account.
 
@@ -16,7 +16,7 @@ Read them in this order. The later files assume the earlier ones.
 3. [README.md](README.md). What the tool is, every input, every function argument, how to run it, and the live URL.
 4. [demo/README.md](demo/README.md). The six fridges and the numbers the demo prints. If you cannot explain a number on that page, it is not ready to show a judge.
 5. [data/README.md](data/README.md). The codebook. All of `data/` is synthetic, seed 5300. Say that out loud if someone asks where the data came from.
-6. [CONTRACT.yaml](CONTRACT.yaml). The task ledger. One task at a time. H-08 is the only one left.
+6. [CONTRACT.yaml](CONTRACT.yaml). The task ledger. One task at a time. Open: H-12, H-13, H-14, then H-08.
 
 ## What is already built
 
@@ -24,15 +24,15 @@ Read them in this order. The later files assume the earlier ones.
 |---|---|
 | H-01 | SPEC.md is filled in. No `FILL IN` blanks left. |
 | H-02 | `readings.csv`, `inventory.csv`, `generator_log.csv`, and the codebook. Six fridges, one reading every 15 minutes, 2026-10-01 through 2026-10-07. |
-| H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. Tests printed `FAIL 0 PASS 482`. |
-| H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge Detail, Capability, Generator, Data. |
+| H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. The suite now prints `FAILED 0 \| WARN 0 \| SKIP 0 \| PASS 810`. |
+| H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge Detail, Capability, Backup generator, Data. |
 | H-05 | `demo/show_numbers.R` and the demo walk-through. It prints `DEMO OK`. |
 | H-06 | GitHub Actions deploys `app/` to the course Posit Connect server. The publisher key is only in GitHub Actions secrets. |
 | H-07 | The root README and `app/README.md`. |
 
 The known-answer check is ten hours of temperatures whose hour means are all exactly 3.5 °C. Sigma short is 0.2569046516. Cpk is 3.2437456007. Ppk is 3.6984390192. The gap is negative on that set because the hour means do not move. Constant data, every reading 3.5 °C, makes Cpk and Ppk missing. They are never infinity. `Rscript app/workflow.R` prints `WORKFLOW OK` when this still matches.
 
-On the demo data the overview is: 6 fridges needing action, 283 blood units at risk, average Ppk 5.719, last generator transfer 48 seconds. The fridge table, including why F04 is red with 0 bags at risk, is in [demo/README.md](demo/README.md).
+On the demo data the overview is: 6 fridges needing action, 283 blood units at risk, average Ppk 5.719, last backup generator transfer 48 seconds. The fridge table, including why F04 is red with 0 bags at risk, is in [demo/README.md](demo/README.md).
 
 ## Please review these before changing anything
 
@@ -71,6 +71,6 @@ If you regenerate the CSVs with `Rscript data/make_data.R`, copy the three files
 
 ## What is left
 
-H-08 is still `todo`. It owns `.gitignore` only. Its check is: clone the public repo into an empty folder, run `Rscript app/testme.R` and the tests with no extra steps, confirm `git grep -i "api_key"` finds no real key, and submit the repo on Devpost. The repo is already public. The Devpost submission is a person, not a commit. The live URL to paste there is the Connect link at the top of this note.
+H-12, H-13 and H-14 are still `todo`, and H-08 is still `todo`. H-12 puts the plain-language explanation of every number next to where the user meets it, H-13 writes CODEBOOK.md, and H-14 states the user and the use case one way everywhere; each names its `owns` paths in the ledger. H-08 owns `.gitignore` only. Its check is: clone the public repo into an empty folder, run `Rscript app/testme.R` and the tests with no extra steps, confirm `git grep -i "api_key"` finds no real key, and submit the repo on Devpost. The repo is already public. The Devpost submission is a person, not a commit. The live URL to paste there is the Connect link at the top of this note.
 
 Do not put the Connect publisher key, or any other secret, in a file, a commit, or the chat. It stays in the GitHub Actions secrets named `CONNECT_SERVER` and `CONNECT_API_KEY`.

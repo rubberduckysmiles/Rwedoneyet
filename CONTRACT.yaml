@@ -479,3 +479,45 @@ tasks:
       ALL CHECKSUMS MATCH: TRUE; README.md gained 'What the backup generator
       does, and what its numbers mean', self-contained with no pointer to
       another file."
+  - id: H-16
+    title: "Repo hygiene: drop the stray README, refresh app/README.md and the handoff note"
+    points: "tool depth: the repo a judge clones carries one README whose page names match the running app, and the handoff note tells a new teammate the true task state"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["README copy.md", "app/README.md", "hi_friends.md", "CONTRACT.yaml"]
+    notes: >
+      Three files belong to no open task and are wrong. README copy.md is a
+      tracked 6,476-byte duplicate of README.md, last written before H-10, and
+      referenced by nothing, so a judge browsing the repo can quote the wrong
+      one. app/README.md still lists the page as Generator, which the app now
+      calls Backup generator. hi_friends.md opens with "read these first" and
+      then says H-08 is the only task left, quotes the suite as FAIL 0 PASS 482,
+      and lists the page as Generator. README.md section 5 (the row calling the
+      10 s line a "Generator spec" while section 7 says it is not a spec limit)
+      and SPEC.md section 6 (the pre-H-15 description of what the user sees)
+      carry the same staleness, but those paths belong to H-12 and H-14, so
+      those two fixes belong to those tasks and not to this one.
+    definition_of_done: >
+      git ls-files no longer lists README copy.md, and no .md file references
+      it. app/README.md names Backup generator in its Pages line. hi_friends.md
+      names the four open tasks, quotes the current suite output, names the
+      page Backup generator, and its overview figures are re-checked against
+      overview_summary(analyses(), generator) rather than copied. Rscript -e
+      "testthat::test_dir('tests')" still prints FAILED 0 | PASS 810, and the
+      ledger parses with H-16 done.
+    result: "Stray tracked 'README copy.md' (6,476 bytes, 258 lines behind
+      README.md, referenced by nothing) removed with git rm. app/README.md's
+      Pages line now reads Backup generator. hi_friends.md brought back to the
+      truth: four open tasks (H-12, H-13, H-14, then H-08) instead of 'H-08 is
+      the only one left', each described in one clause; the suite quoted as
+      FAILED 0 | WARN 0 | SKIP 0 | PASS 810 instead of FAIL 0 PASS 482; the page
+      list renamed to Backup generator; and the overview figures re-run through
+      overview_summary(analyses(), generator) rather than copied, printing
+      needing_action 6, units_at_risk 283, average_ppk 5.718945, last_transfer
+      48, all four matching the note. DoD output quoted: git ls-files 'README
+      copy.md' printed nothing; grep across every .md file for 'README copy',
+      'FAIL 0 PASS 482' and 'the only one left' returned No matches found;
+      no manifest refresh was needed because neither changed file is bundled -
+      its two README hits are the pkgconfig and withr package URLs; testthat
+      printed FAILED 0 | WARN 0 | SKIP 0 | PASS 810."

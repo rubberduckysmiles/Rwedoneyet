@@ -35,4 +35,4 @@ Prints `WORKFLOW OK` when the ten-hour example matches SPEC.md section 4.
 
 ## Pages
 
-Overview, Fridge Detail, Capability, Generator, and Data. Red means act this shift, amber means watch, green means leave it. Limits stay frozen after the first 48 hours, and the Overview page says so.
+Overview, Fridge Detail, Capability, Backup generator, and Data. Red means act this shift, amber means watch, green means leave it. Limits stay frozen after the first 48 hours, and the Overview page says so.
