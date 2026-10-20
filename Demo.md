@@ -22,13 +22,15 @@ Rscript app/workflow.R
 
 ### 1) Overview
 - Fridges needing action, blood units at risk, average Ppk, last backup generator transfer
-- Fridge cards sorted by RPN: badge, blood units, Ppk, "Out of spec in" (forecast), RPN breakdown, plain explanation
+- Dataset dropdown under the boxes: picking a dataset reloads it at once, and the Data page picker follows. The three choices are General demo (planted failures), Scenario one: good, and Scenario one: bad
+- One "How to read the fridge cards" card explains the columns once, instead of repeating them under every card
+- Fridge cards sorted by RPN: badge, blood units, Ppk, "Out of spec in" (forecast), RPN breakdown, and that fridge's own special-cause sentence
 - Limits frozen from first 48 hours
 
 ### 2) Fridge Detail
 - X-bar, range, and s-charts with baseline shaded; 1–2 SE zone lines shown (not control limits)
 - Violations table with hour/chart/test and plain-English meaning
-- Blood types present and which are at risk
+- Blood types present and which are at risk: at-risk bags are always red and within-spec bags always green, whatever the fridge's badge
 - Date range picker
 
 ### 3) Capability

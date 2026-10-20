@@ -63,18 +63,31 @@ test_that("the fridge card says what each of its four fields means", {
 
   shiny::testServer(env$server, {
     session$setInputs(fridge = "F01", color_mode = "light")
-    html <- paste(unlist(output$fridge_cards), collapse = " ")
+    cards <- paste(unlist(output$fridge_cards), collapse = " ")
+    notes <- paste(unlist(output$overview_notes), collapse = " ")
 
-    expect_match(html, "bags stored", fixed = TRUE,
+    # The column meanings were moved out of the six cards and into the single
+    # description card above them, so they are stated once instead of six times.
+    # They must still exist on the Overview - check the new home, not the old one.
+    expect_match(notes, "bags stored", fixed = TRUE,
                  info = "Blood units must say they are the bags stored")
-    expect_match(html, "nearer of 1", fixed = TRUE,
+    expect_match(notes, "nearer of 1", fixed = TRUE,
                  info = "Ppk must say it is measured to the nearer spec limit")
-    expect_match(html, "fitted line reaches", fixed = TRUE,
+    expect_match(notes, "fitted line", fixed = TRUE,
                  info = "'Out of spec in' must say it is the forecast time")
-    # The three factors are named, not just printed.
+    expect_match(notes, "first 48 hours", fixed = TRUE,
+                 info = "Mean and Std dev must say they come from the baseline")
+
+    # The three factors are named, not just printed, and the per-card arithmetic
+    # line stays on each card with that card's own numbers.
     for (word in c("severity", "occurrence", "urgency")) {
-      expect_match(html, word, fixed = TRUE, info = word)
+      expect_match(notes, word, fixed = TRUE, info = paste("notes:", word))
+      expect_match(cards, word, fixed = TRUE, info = paste("cards:", word))
     }
+
+    # And the shared prose must NOT be repeated under every card any more.
+    expect_false(grepl("bags stored", cards, fixed = TRUE),
+                 info = "the shared column meanings belong in the notes card, not on each card")
   })
 })
 
