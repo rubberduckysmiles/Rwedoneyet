@@ -38,7 +38,7 @@ if (!is.na(pinned) && !identical(pinned, running) && !override) {
 }
 
 r_files <- list.files("app/R", pattern = "\\.[Rr]$", full.names = FALSE)
-data_files <- list.files("app/data", pattern = "\\.csv$", full.names = FALSE)
+data_files <- list.files("app/data", pattern = "\\.csv$", recursive = TRUE, full.names = FALSE)
 app_files <- c("app.R", "qc.R", file.path("R", r_files), file.path("data", data_files))
 
 rsconnect::writeManifest(appDir = "app", appFiles = app_files)

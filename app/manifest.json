@@ -2030,7 +2030,7 @@
   },
   "files": {
     "app.R": {
-      "checksum": "417e3c58513d8afeda83927f5e482db3"
+      "checksum": "ad326dc3c4368650c3d3bc6ed8f7b9c1"
     },
     "data/generator_log.csv": {
       "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
@@ -2076,6 +2076,24 @@
     },
     "R/subgroups.R": {
       "checksum": "89f369fb1378bc315ce199a2bbc3482b"
+    },
+    "data/scenario_one_bad/generator_log.csv": {
+      "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
+    },
+    "data/scenario_one_bad/inventory.csv": {
+      "checksum": "56d90cf1c2fdcca971bb302729ffcabe"
+    },
+    "data/scenario_one_bad/readings.csv": {
+      "checksum": "a6ade73760933721328b87202e00c8a6"
+    },
+    "data/scenario_one_good/generator_log.csv": {
+      "checksum": "c6dd165fa3323fa9a2e3291a6c8c1ae8"
+    },
+    "data/scenario_one_good/inventory.csv": {
+      "checksum": "56d90cf1c2fdcca971bb302729ffcabe"
+    },
+    "data/scenario_one_good/readings.csv": {
+      "checksum": "2617a7f5de9679533f8d5890d0a4fb12"
     }
   },
   "users": null
