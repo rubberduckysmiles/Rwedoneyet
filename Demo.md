@@ -22,10 +22,12 @@ Rscript app/workflow.R
 
 ### 1) Overview
 - Fridges needing action, blood units at risk, average Ppk, last backup generator transfer
+- The first three are coloured by their value: green at zero (or, for Ppk, at or above 1) and red otherwise, so a number that needs attention is visible at a glance. Average Ppk stays uncoloured until at least one fridge has usable limits
 - Dataset dropdown under the boxes: picking a dataset reloads it at once, and the Data page picker follows. The three choices are General demo (planted failures), Scenario one: good, and Scenario one: bad
 - One "How to read the fridge cards" card explains the columns once, instead of repeating them under every card
 - Fridge cards sorted by RPN: badge, blood units, Ppk, "Out of spec in" (forecast), RPN breakdown, and that fridge's own special-cause sentence
 - Limits frozen from first 48 hours
+- Every chart's axis labels, tick numbers, and in-chart notes are drawn in the page's text colour, so they stay readable in both light and dark mode
 
 ### 2) Fridge Detail
 - X-bar, range, and s-charts with baseline shaded; 1–2 SE zone lines shown (not control limits)
