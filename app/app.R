@@ -65,6 +65,15 @@ status_badge <- function(a) {
 }
 
 # Theme the plot for light or dark mode and hide the toolbar.
+#
+# font below sets the plot's default text color, but plotly does NOT let an axis inherit it:
+# a chart that passes its own xaxis/yaxis list REPLACES the axis settings rather than merging
+# them, so tick numbers fell back to plotly's dark default and were unreadable on the dark page.
+# A later layout() for the same axis DOES deep-merge, so TICK LABELS are colored here, once,
+# for every chart. Axis titles and annotations cannot be fixed here: plotly keeps neither in
+# p$x$layout before the build, and it discards a title's text when a later call gives the title
+# only a font. Those are colored where their words are set, through axis_title() and ann_font()
+# below. The legend already inherits font, so it is left alone.
 themed <- function(p, dark) {
   fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
   grid <- if (isTRUE(dark)) "rgba(255,255,255,0.12)" else "rgba(0,0,0,0.10)"
@@ -72,16 +81,29 @@ themed <- function(p, dark) {
     layout(
       paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)",
       font = list(color = fg),
-      xaxis = list(gridcolor = grid, zerolinecolor = grid),
-      yaxis = list(gridcolor = grid, zerolinecolor = grid),
+      xaxis = list(gridcolor = grid, zerolinecolor = grid, tickfont = list(color = fg)),
+      yaxis = list(gridcolor = grid, zerolinecolor = grid, tickfont = list(color = fg)),
       legend = list(orientation = "h", y = -0.2)
     ) %>%
     config(displayModeBar = FALSE)
 }
 
+# An axis title that carries the theme color. The text is passed in because plotly drops a
+# title's text if a later call names only its font, so it must be set where the words are.
+axis_title <- function(text, dark) {
+  fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
+  list(text = text, font = list(color = fg))
+}
+
+# The theme's text color, for a chart's own annotations (plotly does not let them inherit it).
+ann_font <- function(dark) {
+  list(color = if (isTRUE(dark)) "#E6E6E6" else "#212529")
+}
+
 empty_plot <- function(text, dark = FALSE) {
   plot_ly() %>%
-    layout(annotations = list(text = text, showarrow = FALSE, x = 0.5, y = 0.5, xref = "paper", yref = "paper"),
+    layout(annotations = list(text = text, showarrow = FALSE, x = 0.5, y = 0.5, xref = "paper", yref = "paper",
+                              font = ann_font(dark)),
            xaxis = list(visible = FALSE), yaxis = list(visible = FALSE)) %>%
     themed(dark)
 }
@@ -148,7 +170,8 @@ sparkline_plot <- function(a, dark = FALSE) {
            margin = list(l = 56, r = 8, t = 8, b = 36),
            xaxis = list(title = "", nticks = 3, tickformat = "%b %d",
                         tickfont = list(size = 10, color = fg)),
-           yaxis = list(title = "Hourly mean (\u00B0C)", tickfont = list(size = 10, color = fg),
+           yaxis = list(title = axis_title("Hourly mean (\u00B0C)", dark),
+                        tickfont = list(size = 10, color = fg),
                         range = y_range),
            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
     config(displayModeBar = FALSE)
@@ -240,8 +263,8 @@ xbar_plot <- function(a, keep, zone_lines, dark) {
   if (!is.null(base)) shapes <- c(shapes, list(base))
 
   p %>%
-    layout(shapes = shapes, yaxis = list(title = "Hourly mean (\u00B0C)"), xaxis = list(title = ""),
-           title = list(text = "X-bar chart. Limits are the baseline mean \u00b1 3 standard errors. Gray marks the first 48 hours.", font = list(size = 14))) %>%
+    layout(shapes = shapes, yaxis = list(title = axis_title("Hourly mean (\u00B0C)", dark)), xaxis = list(title = ""),
+           title = list(text = "X-bar chart. Limits are the baseline mean \u00b1 3 standard errors. Gray marks the first 48 hours.", font = list(size = 14, color = ann_font(dark)$color))) %>%
     themed(dark)
 }
 
@@ -274,8 +297,8 @@ range_plot <- function(a, keep, dark) {
   base <- baseline_shape(d)
   p %>%
     layout(shapes = if (is.null(base)) list() else list(base),
-           yaxis = list(title = "Hourly range (\u00B0C)"), xaxis = list(title = ""),
-           title = list(text = "Range chart", font = list(size = 14))) %>%
+           yaxis = list(title = axis_title("Hourly range (\u00B0C)", dark)), xaxis = list(title = ""),
+           title = list(text = "Range chart", font = list(size = 14, color = ann_font(dark)$color))) %>%
     themed(dark)
 }
 
@@ -311,9 +334,9 @@ sd_plot <- function(a, keep, dark) {
   base <- baseline_shape(d)
   p %>%
     layout(shapes = if (is.null(base)) list() else list(base),
-           yaxis = list(title = "Hourly standard deviation (\u00B0C)", autosize = TRUE),
+           yaxis = list(title = axis_title("Hourly standard deviation (\u00B0C)", dark), autosize = TRUE),
            xaxis = list(title = ""),
-           title = list(text = "Standard deviation chart (dispersion; limits frozen)", font = list(size = 14))) %>%
+           title = list(text = "Standard deviation chart (dispersion; limits frozen)", font = list(size = 14, color = ann_font(dark)$color))) %>%
     themed(dark)
 }
 
@@ -325,12 +348,13 @@ histogram_plot <- function(a, dark) {
     list(x = TARGET_TEMP, text = "3.5 \u00B0C (target)"),
     list(x = SPEC_HIGH, text = "6 \u00B0C (upper spec)")
   )
-  notes <- lapply(notes, function(n) c(n, list(y = 1, yref = "paper", xref = "x", showarrow = FALSE, yanchor = "bottom")))
+  notes <- lapply(notes, function(n) c(n, list(y = 1, yref = "paper", xref = "x", showarrow = FALSE,
+                                                  yanchor = "bottom", font = ann_font(dark))))
   plot_ly(x = a$base_readings, type = "histogram", nbinsx = 30, marker = list(color = "#6C757D"),
           hovertemplate = "%{x} C: %{y} readings<extra></extra>") %>%
     layout(shapes = shapes, annotations = notes,
-           xaxis = list(title = "Baseline temperature (\u00B0C)", range = c(0.5, 6.5)),
-           yaxis = list(title = "Readings"), showlegend = FALSE,
+           xaxis = list(title = axis_title("Baseline temperature (\u00B0C)", dark), range = c(0.5, 6.5)),
+           yaxis = list(title = axis_title("Readings", dark)), showlegend = FALSE,
            margin = list(t = 40)) %>%
     themed(dark)
 }
@@ -341,7 +365,7 @@ rolling_plot <- function(a, dark) {
           line = list(color = "#444444", width = 2),
           text = sprintf("%s<br>Ppk %s", time_text(a$rolling_time), formatC(a$rolling_ppk, format = "f", digits = 2)),
           hoverinfo = "text") %>%
-    layout(yaxis = list(title = "Rolling 24-hour Ppk"), xaxis = list(title = ""), showlegend = FALSE) %>%
+    layout(yaxis = list(title = axis_title("Rolling 24-hour Ppk", dark)), xaxis = list(title = ""), showlegend = FALSE) %>%
     themed(dark)
 }
 
@@ -369,8 +393,11 @@ bloodtype_plot <- function(bt, dark) {
              textposition = "inside",
              hovertemplate = "%{y}: %{x} bags at risk<extra></extra>") %>%
     layout(barmode = "stack",
-           xaxis = list(title = "Red-cell bags", gridcolor = if (isTRUE(dark)) "rgba(255,255,255,0.12)" else "rgba(0,0,0,0.10)"),
-           yaxis = list(title = "", categoryorder = "total ascending"),
+           xaxis = list(title = axis_title("Red-cell bags", dark),
+                        tickfont = list(color = ann_font(dark)$color),
+                        gridcolor = if (isTRUE(dark)) "rgba(255,255,255,0.12)" else "rgba(0,0,0,0.10)"),
+           yaxis = list(title = "", categoryorder = "total ascending",
+                        tickfont = list(color = ann_font(dark)$color)),
            legend = list(orientation = "h", y = -0.25),
            margin = list(t = 10)) %>%
     config(displayModeBar = FALSE)
@@ -398,9 +425,10 @@ generator_plots <- function(g, dark) {
   ind <- ind %>%
     layout(shapes = shapes,
            annotations = list(list(x = 1, xref = "paper", y = 10, yref = "y", text = "10 s threshold", showarrow = FALSE,
-                                   xanchor = "right", yanchor = "bottom")),
-           xaxis = list(title = "Test number (in date order)"), yaxis = list(title = "Transfer time (s)"),
-           title = list(text = "Individuals chart", font = list(size = 14))) %>%
+                                   xanchor = "right", yanchor = "bottom", font = ann_font(dark))),
+           xaxis = list(title = axis_title("Test number (in date order)", dark)),
+           yaxis = list(title = axis_title("Transfer time (s)", dark)),
+           title = list(text = "Individuals chart", font = list(size = 14, color = ann_font(dark)$color))) %>%
     themed(dark)
 
   has_mr <- !is.na(g$moving_range)
@@ -413,9 +441,9 @@ generator_plots <- function(g, dark) {
   mr_shapes <- if (is.na(lim$mr_ucl)) list() else list(hline(lim$mr_center, "#888888", "solid"),
                                                        hline(lim$mr_ucl, "#888888", "dash"), hline(lim$mr_lcl, "#888888", "dash"))
   mr <- mr %>%
-    layout(shapes = mr_shapes, xaxis = list(title = "Test number (in date order)"),
-           yaxis = list(title = "Moving range (s)"), showlegend = FALSE,
-           title = list(text = "Moving-range chart", font = list(size = 14))) %>%
+    layout(shapes = mr_shapes, xaxis = list(title = axis_title("Test number (in date order)", dark)),
+           yaxis = list(title = axis_title("Moving range (s)", dark)), showlegend = FALSE,
+           title = list(text = "Moving-range chart", font = list(size = 14, color = ann_font(dark)$color))) %>%
     themed(dark)
   list(individuals = ind, moving_range = mr)
 }
@@ -435,6 +463,7 @@ ui <- bslib::page_navbar(
       .bbm-number { font-size: 2.6rem; font-weight: 500; letter-spacing: -0.03em; line-height: 1.05; font-variant-numeric: tabular-nums; }
       .bbm-number-quiet { font-size: 1.45rem; font-weight: 500; line-height: 1.15; font-variant-numeric: tabular-nums; }
       .bbm-over { color: #D64045; }
+      .bbm-ok { color: #2E9E6B; }
       .bbm-figure { font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; }
       .bbm-fridge .card { border-left: 3px solid var(--bbm-edge); }
       .bbm-status { background: var(--bs-body-bg); border: 3px solid var(--bs-border-color); }
@@ -678,18 +707,27 @@ server <- function(input, output, session) {
     }
     s <- summary_numbers()
     over <- isTRUE(s$last_transfer > 10)
+    # Zero means nothing to chase, so it reads green; anything else reads red. The same rule
+    # for both counts. Average Ppk is judged against 1, the fit its own note describes; NA
+    # means no fridge has usable limits yet, which is neither good nor bad news, so it keeps
+    # the default colour rather than claiming either.
+    count_class <- function(n) if (isTRUE(n == 0)) "bbm-ok" else "bbm-over"
+    ppk_class <- if (is.na(s$average_ppk)) NULL else if (s$average_ppk >= 1) "bbm-ok" else "bbm-over"
     transfer <- if (is.na(s$last_transfer)) "\u2014" else paste0(fmt_num(s$last_transfer, 1), " s")
     tagList(
       bslib::layout_columns(
         fill = FALSE,
         col_widths = bslib::breakpoints(sm = 12, md = 6),
-        stat_box("Fridges needing action", s$needing_action, sprintf("of %d fridges, red or amber", length(analyses()))),
-        stat_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), "out of range now, or flagged in the last 24 h")
+        stat_box("Fridges needing action", s$needing_action, sprintf("of %d fridges, red or amber", length(analyses())),
+                 value_class = count_class(s$needing_action)),
+        stat_box("Blood units at risk", format(s$units_at_risk, big.mark = ","), "out of range now, or flagged in the last 24 h",
+                 value_class = count_class(s$units_at_risk))
       ),
       bslib::layout_columns(
         fill = FALSE, class = "mt-3",
         col_widths = bslib::breakpoints(sm = 12, md = 6),
-        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "The mean of each fridge\'s Ppk, counted in sigmas. Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.", quiet = TRUE),
+        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "The mean of each fridge\'s Ppk, counted in sigmas. Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.",
+                 quiet = TRUE, value_class = ppk_class),
         stat_box("Last backup test", transfer,
                  if (is.na(s$last_transfer)) "No backup test loaded." else "Last backup test \u00b7 team-chosen threshold (10 s); the manager sets it for their own site. Transfer time measures how many seconds it takes to switch to backup power.",
                  quiet = TRUE, value_class = if (over) "bbm-over" else NULL)

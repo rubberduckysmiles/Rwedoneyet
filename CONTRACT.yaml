@@ -1170,3 +1170,85 @@ tasks:
       refreshed by hand as md5 of the LF-normalised bytes with all bundled
       checksums matching.
     result: "Three requested UI changes, and two real defects found and fixed while building them. (1) The blood-type chart's at-risk bars now take the app's red #D64045 and the within-spec bars its green #2E9E6B for all six demo fridges - verified by building the plot for each and reading the trace colors, including green F01 and F04, which previously drew their at-risk bags in the safe green; the cause was the at-risk trace borrowing a$status_color, and bloodtype_plot() lost that argument so it cannot come back. (2) A dataset dropdown on the Overview under the summary boxes now applies on the pick and keeps in step with the Data page picker; both go through one load_dataset() writing rv$dataset_id. Switching the demo through the dropdown moves units at risk 283 (general) to 67 (scenario_one_good) to 275 (scenario_one_bad) and back, and the Data page button path reaches the same 67, so the numbers really follow the dataset. (3) The two paragraphs repeated under all six cards moved into one 'How to read the fridge cards' card above them; each card keeps its own flag_sentence. Two defects the tests caught: ignoreInit = TRUE was swallowing the FIRST dropdown pick (the test file went FAIL 5 | PASS 40 with it, FAIL 0 | PASS 45 without), and DATASET_CHOICES rendered the 'general' option with an NA label because DATASET_LABELS was indexed by the empty folder name instead of the id. Quoted: tests/test-formatting_overview.R FAIL 0 | WARN 0 | SKIP 0 | PASS 56, tests/test-captions.R FAIL 0 | WARN 0 | SKIP 0 | PASS 39, the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1155 (was 1090), app/workflow.R WORKFLOW OK, and demo/show_numbers.R DEMO OK with the same four fridges needing action, 283 bags at risk, average Ppk 5.72 and 48 seconds. The picker's re-render is pinned too, because it renders its own selection on every switch: all three options survive and no stale selection sticks, and an uploaded file raises a flag that makes the dropdown say the numbers on screen are not a dataset, cleared again when a dataset is loaded (both asserted through the real upload path). No statistic, limit, badge, bag count or sentence moved. app/manifest.json's app.R checksum moved from 9fef747fd7ef37b0921a18a0ad616281 to 572212567962cd6f5cccfe059eb6c24c, refreshed by hand as md5 of the LF-normalised bytes in a one-line diff; all 22 bundled checksums match, platform 4.5.2."
+
+  - id: H-36
+    title: "Formatting: colour the three Overview stat boxes by value, and make every chart text colour match the theme"
+    points: "tool clarity: a number that needs attention looks like it needs attention, and no chart text is unreadable in dark mode"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-formatting_overview.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, on the "Formatting-2" branch, in two
+      parts. Part one: three of the four Overview summary boxes print a number
+      that can be good or bad, and all four printed it in the same neutral
+      colour, so the box for "4 fridges red or amber" looked exactly like the
+      box for "0". "Fridges needing action" and "Blood units at risk" take the
+      app's green #2E9E6B when they are zero and its red #D64045 when they are
+      not, and "Average Ppk" takes the green when it is at or above 1 (inside
+      the fit the box's own note describes) and the red when it is below 1.
+      Ppk can be NA when no fridge has usable baseline limits yet; NA is
+      neither, so it keeps the default colour, the same way "Last backup test"
+      does when no test is loaded. This is colour only: no number, threshold,
+      limit or badge moves, and the boxes still print the same figures.
+      Part two: in dark mode every chart drew its axis titles, tick numbers
+      and in-chart annotations in plotly's default near-black, because
+      themed() sets the colour on layout font and each chart then passes its
+      own xaxis and yaxis list, which REPLACES the axis settings rather than
+      merging them. The fix reaches every axis, including the annotation text
+      ("1 C (lower spec)", the +/-3 SE labels), in light and dark alike.
+      Legends are left alone: they already inherit the layout font and are
+      correct in both themes.
+    definition_of_done: >
+      In the rendered Overview, "Fridges needing action" and "Blood units at
+      risk" carry the green class when their value is zero and the red class
+      when it is not, and "Average Ppk" carries the green at or above 1, the
+      red below 1, and no class when it is NA - asserted by rendering the
+      boxes through the real summary for a dataset that produces each case.
+      Every chart's x-axis and y-axis titles, tick labels and annotations
+      resolve to #E6E6E6 in dark mode and #212529 in light mode: building each
+      plot (X-bar, range, s, histogram, rolling, blood-type, generator) and
+      reading the built layout returns those colours, and no chart reports a
+      NULL or default axis colour. testthat prints 0 failures with the new
+      assertions added and no existing one weakened, DEMO OK and WORKFLOW OK
+      still print with every published number unchanged, README.md and
+      Demo.md describe the colours, and app/manifest.json's app.R checksum is
+      refreshed by hand as md5 of the LF-normalised bytes with all bundled
+      checksums matching.
+    result: >
+      Both requested changes, measured rather than assumed. (1) The three Overview counts are now coloured
+      by value: "Fridges needing action" and "Blood units at risk" take the app's green #2E9E6B at zero
+      and its red #D64045 above it, and "Average Ppk" takes the green at or above 1 and the red below it,
+      with NA left uncoloured because "no usable limits yet" is neither. Read off the rendered page in the
+      browser: 4 fridges needing action and 283 bags at risk render rgb(214,64,69), average Ppk 5.72
+      renders rgb(46,158,107). (2) In dark mode every chart drew its title, tick numbers and in-chart
+      notes in plotly's default near-black, because themed() sets layout font and each chart then passes
+      its own xaxis and yaxis list, which REPLACES the axis rather than merging it. Two traps found by
+      measuring rather than guessing: plotly keeps neither annotations nor axis titles in p$x$layout
+      before the build, and it DISCARDS a title's text if a later call gives the title only a font, so the
+      colour had to be applied where the words are - axis_title() and ann_font(), used by each chart -
+      while tick labels are coloured once in themed(). Quoted from the built layouts: all ten charts
+      (sparkline, X-bar, range, s, histogram, rolling, blood-type, generator individuals and moving range,
+      empty state) return #E6E6E6 for x/y ticks and every non-empty axis title and every annotation in
+      dark, and #212529 in light, with the annotation check reporting 0 uncoloured and the empty state's
+      own message now coloured too; the browser confirms it, with the six Overview cards' "+3 SE" and "-3
+      SE" labels and the histogram's "1 C (lower spec)" notes all computing to rgb(230,230,230) on the
+      dark page while the y-axis title keeps its words, "Hourly mean (C)". The pre-existing hard-coded
+      #444 that made the deployed chart titles unreadable is gone. New assertions in tests/test-
+      formatting_overview.R run through the APP's own boundary expression by stubbing overview_summary()
+      before the server starts, not by re-typing the rule: a first draft that re-typed it was caught by a
+      negative control, and flipping the app's ">=" to ">" now fails the file (FAIL 1) where it previously
+      passed. Four mutations were each confirmed to fail the file: a count box losing its colour FAIL 2,
+      the Ppk boundary FAIL 1, axis titles losing their colour FAIL 38, annotations losing their colour
+      FAIL 13. Quoted: tests/test-formatting_overview.R FAIL 0 | WARN 0 | SKIP 0 | PASS 166, the full
+      suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1265 (was 1155), app/workflow.R WORKFLOW OK, and
+      demo/show_numbers.R DEMO OK with every published number unchanged (Ppk 5.536, F02 180 bags,
+      generator n=30 transfer 48 s). Legends were deliberately left alone. app/manifest.json's app.R
+      checksum moved from 572212567962cd6f5cccfe059eb6c24c to 172d6cf7eb004d18ac9c919bb9069ab4 in a one-
+      line diff that preserves the file's CRLF and trailing newline; a first attempt re-serialised the
+      JSON and rewrote all 2100 lines, and was reverted. All 22 bundled checksums match, platform 4.5.2,
+      and data/readings.csv and app/data/readings.csv remain byte-identical at
+      8b566af6767a9e010ae17585e2adc12b. One pre-existing defect found and NOT fixed here, because it is
+      out of scope: toggling the theme after load leaves the already-drawn charts in the old colour, and
+      the deployed main app - without this change - does the same, so it is neither caused nor worsened by
+      H-36.
