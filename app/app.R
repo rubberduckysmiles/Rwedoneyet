@@ -99,6 +99,50 @@ baseline_shape <- function(d) {
 
 # ---- Plots ---------------------------------------------------------------------------------------
 
+sparkline_plot <- function(a, dark = FALSE) {
+  d <- utils::tail(a$subgroups, 48)
+  if (nrow(d) == 0) return(empty_plot("no hourly data", dark))
+  fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
+  shapes <- list()
+  annotations <- list()
+  y_title <- "Hourly mean (\u00B0C)"
+  y_range <- NULL
+  if (isTRUE(a$has_limits)) {
+    lim <- a$baseline$limits$xbar
+    # The band is the baseline mean plus or minus 3 standard errors.
+    shapes <- list(
+      list(type = "rect", xref = "paper", x0 = 0, x1 = 1, yref = "y",
+           y0 = lim$lcl, y1 = lim$ucl,
+           fillcolor = "rgba(100,120,150,0.16)", line = list(width = 0), layer = "below"),
+      hline(lim$lcl, "rgba(128,128,128,0.75)", "dot"),
+      hline(lim$ucl, "rgba(128,128,128,0.75)", "dot")
+    )
+    label <- function(y, text, anchor) {
+      list(x = 1, xref = "paper", xanchor = "right", y = y, yanchor = anchor,
+           text = text, showarrow = FALSE, font = list(size = 10, color = fg))
+    }
+    annotations <- list(label(lim$ucl, "+3 SE", "bottom"), label(lim$lcl, "-3 SE", "top"))
+    if (!is.null(a$baseline$center) && !is.null(a$baseline$sigma_short)) {
+      y_title <- sprintf("Mean %.2f \u00B0C, sd %.2f \u00B0C", a$baseline$center, a$baseline$sigma_short)
+    }
+    span <- lim$ucl - lim$lcl
+    pad <- if (isTRUE(span > 0)) span * 0.28 else 0.1
+    y_range <- c(min(c(d$mean, lim$lcl), na.rm = TRUE) - pad,
+                 max(c(d$mean, lim$ucl), na.rm = TRUE) + pad)
+  }
+  plot_ly(d, x = ~time, y = ~mean, type = "scatter", mode = "lines",
+          line = list(color = a$status_color, width = 2),
+          text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text") %>%
+    layout(shapes = shapes, annotations = annotations,
+           margin = list(l = 68, r = 8, t = 8, b = 36),
+           xaxis = list(title = "", nticks = 3, tickformat = "%b %d",
+                        tickfont = list(size = 10, color = fg)),
+           yaxis = list(title = list(text = y_title, font = list(size = 11, color = fg)),
+                        tickfont = list(size = 10, color = fg), range = y_range),
+           paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
+    config(displayModeBar = FALSE)
+}
+
 # The fridge the lab manager should open first: highest priority among red and amber.
 shift_status <- function(list_a) {
   if (length(list_a) == 0) return(NULL)
@@ -638,6 +682,15 @@ server <- function(input, output, session) {
     })
     do.call(bslib::layout_columns,
             c(list(fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 6, xl = 4)), unname(cards)))
+  })
+
+  observe({
+    for (a_id in names(analyses())) {
+      local({
+        id <- a_id
+        output[[paste0("spark_", safe_id(id))]] <- renderPlotly(sparkline_plot(analyses()[[id]], dark()))
+      })
+    }
   })
 
   # ---- Fridge Detail
