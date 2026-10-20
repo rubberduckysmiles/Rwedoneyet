@@ -208,6 +208,37 @@ stat_box <- function(label, value, note, quiet = FALSE, value_class = NULL) {
   )
 }
 
+# ---- Colour rules for a value box --------------------------------------------------------------
+# bslib::value_box() renders its value as <p class="value-box-value">, and it has no argument
+# for a class on that number. Wrapping the value in a span keeps bslib's own class as well as
+# ours, so the box looks the same and only the colour changes. The rules below answer one
+# question each - "is this number good news?" - and return NULL, never a colour, when the
+# answer is "cannot tell yet". A fridge with no usable baseline limits is neither good nor bad,
+# so it keeps the default colour, the same choice the Overview's Average Ppk makes.
+
+CAPABILITY_GAP_GREEN <- 0.10  # |Gap| below this reads as steady; a team-chosen visual guide
+
+# TRUE is green, FALSE is red, NULL is uncoloured.
+cap_ok <- function(cpk) if (is.na(cpk)) NULL else cpk >= 1
+
+# Gap is signed and can be negative (Ppk above Cpk). The caption calls a near-zero Gap steady
+# without saying which sign is bad, so the magnitude is what matters: -0.29 and +0.29 are the
+# same news. This is a judgement the team made, not a formula from the textbook.
+gap_ok <- function(gap) if (is.na(gap)) NULL else abs(gap) < CAPABILITY_GAP_GREEN
+
+# The generator's 10 s line is the team's chosen threshold, NOT the chart's own control limit,
+# so the Capability card and the Overview box never disagree.
+generator_ok <- function(value) if (is.na(value)) NULL else value <= 10
+
+# A count of flagged tests: zero is the good case.
+zero_ok <- function(n) if (is.na(n)) NULL else n == 0
+
+# Wrap a box's value for display, colouring it by the rule's answer. ok = NULL leaves it plain.
+box_value <- function(value, ok) {
+  cls <- if (is.null(ok)) NULL else if (isTRUE(ok)) "bbm-ok" else "bbm-over"
+  if (is.null(cls)) value else tags$span(class = cls, value)
+}
+
 xbar_plot <- function(a, keep, zone_lines, dark) {
   if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
   d <- a$subgroups
@@ -960,11 +991,11 @@ server <- function(input, output, session) {
                 "gap nothing is cooling, so the bags are exposed for exactly that long.")),
         bslib::layout_columns(
           fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
-          bslib::value_box("Last transfer", fmt_num(gs$last, 1),
+          bslib::value_box("Last transfer", box_value(fmt_num(gs$last, 1), generator_ok(gs$last)),
                            tags$small("seconds, from the most recent test")),
-          bslib::value_box("Typical transfer", fmt_num(gs$typical, 1),
+          bslib::value_box("Typical transfer", box_value(fmt_num(gs$typical, 1), generator_ok(gs$typical)),
                            tags$small("seconds, the center of the chart")),
-          bslib::value_box("Tests beyond the limits", sprintf("%d", gs$beyond),
+          bslib::value_box("Tests beyond the limits", box_value(sprintf("%d", gs$beyond), zero_ok(gs$beyond)),
                            tags$small(sprintf("of %d tests run", gs$n)))
         ),
         tags$p(class = "text-muted small mb-0",
@@ -974,14 +1005,14 @@ server <- function(input, output, session) {
     tagList(
       bslib::layout_columns(
         fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
-        bslib::value_box("Cpk (short-term sigma)", fmt_num(a$cpk, 2),
+        bslib::value_box("Cpk (short-term sigma)", box_value(fmt_num(a$cpk, 2), cap_ok(a$cpk)),
           tags$small(paste("Room left if this fridge keeps holding temperature the way it",
                            "has been holding it hour to hour. Above 1.0 is room to spare;",
                            "below 1.0 it cannot reliably stay in spec."))),
-        bslib::value_box("Ppk (overall sigma)", fmt_num(a$ppk, 2),
+        bslib::value_box("Ppk (overall sigma)", box_value(fmt_num(a$ppk, 2), cap_ok(a$ppk)),
           tags$small(paste("The same room measured across the whole baseline, drift and",
                            "hour-to-hour shifts included. This is the long-run number."))),
-        bslib::value_box("Gap (Cpk minus Ppk)", fmt_num(a$gap, 2),
+        bslib::value_box("Gap (Cpk minus Ppk)", box_value(fmt_num(a$gap, 2), gap_ok(a$gap)),
           tags$small(paste("A stability signal, not a score. Near zero means the fridge is",
                            "steady. Clearly positive means it holds temperature within an",
                            "hour but wanders between hours, which is a stability problem",

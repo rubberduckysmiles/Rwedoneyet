@@ -37,9 +37,10 @@ Rscript app/workflow.R
 
 ### 3) Capability
 - Cpk, Ppk, Gap with plain captions; histogram (1 °C, 3.5 °C target, 6 °C) noting spec vs control limits
+- All six value boxes are coloured by their value, the same way the Overview boxes are: Cpk and Ppk green at or above 1 and red below; Gap green while it stays within 0.10 of zero and red once it does not (judged on distance from zero, not sign, so −0.06 reads green and +0.29 reads red); last and typical transfer green at or below the 10 s line and red above; tests beyond the limits green at zero and red above. A value that cannot be computed yet gets no colour
 - Rolling 24-hour Ppk (96 readings = 24h at 15m); falling line means worsening
 - Backup generator stats (last/typical, beyond limits) — transfer time is seconds from power loss to load
-- 10 s line is team-chosen threshold (not spec or control limit)
+- 10 s line is team-chosen threshold (not spec or control limit), and is the line the transfer colours use, so this card and the Overview agree
 
 ### 4) Backup generator
 - Individuals and moving-range charts with 10 s threshold; investigate if recent tests fall well above limits
