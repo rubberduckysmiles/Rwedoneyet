@@ -17,6 +17,13 @@ outside_data <- file.path(dirname(app_dir), "data")
 inside_data <- file.path(app_dir, "data")
 data_dir <- if (dir.exists(outside_data)) outside_data else inside_data
 
+# Dataset picker on the Data page: internal id -> folder under data_dir.
+DATASETS <- c(general = "", scenario_one_good = "scenario_one_good",
+              scenario_one_bad = "scenario_one_bad")
+DATASET_LABELS <- c(general = "General demo (planted failures)",
+                    scenario_one_good = "Scenario one: good",
+                    scenario_one_bad = "Scenario one: bad")
+
 theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
 
 # One color per test number for flagged points. Red, amber and green are kept for status only.
@@ -493,7 +500,12 @@ ui <- bslib::page_navbar(
       fileInput("up_inventory", "Inventory (fridge_id, blood_type, blood_units)", accept = ".csv"),
       fileInput("up_generator", "Backup generator log (date, transfer_time_sec)", accept = ".csv")
     ),
-    actionButton("load_demo", "Load demo data", class = "btn-primary mb-3"),
+    selectInput("dataset", "Dataset", choices = c("General demo (planted failures)" = "general",
+                                                "Scenario one: good" = "scenario_one_good",
+                                                "Scenario one: bad" = "scenario_one_bad")),
+    actionButton("load_demo", "Load dataset", class = "btn-primary mb-3"),
+    tags$p(class = "text-muted small",
+           "General: six fridges with planted failures. Good: six fridges that each behave differently. Bad: all six are ordinary noise, nothing fails."),
     uiOutput("data_status"),
     bslib::navset_card_tab(
       title = "Preview",
@@ -513,9 +525,9 @@ server <- function(input, output, session) {
   demo <- load_demo_data(data_dir)
   rv <- reactiveValues(
     readings = demo$readings, inventory = demo$inventory, backup_generator = demo$generator,
-    from_readings = if (is.null(demo$readings)) "none" else "demo data",
-    from_inventory = if (is.null(demo$inventory)) "none" else "demo data",
-    from_backup_generator = if (is.null(demo$generator)) "none" else "demo data"
+    from_readings = if (is.null(demo$readings)) "none" else "General demo (planted failures)",
+    from_inventory = if (is.null(demo$inventory)) "none" else "General demo (planted failures)",
+    from_backup_generator = if (is.null(demo$generator)) "none" else "General demo (planted failures)"
   )
 
   dark <- reactive(identical(input$color_mode, "dark"))
@@ -539,16 +551,21 @@ server <- function(input, output, session) {
   observeEvent(input$up_generator, try_upload(input$up_generator, prepare_generator, "backup_generator", "backup generator log"))
 
   observeEvent(input$load_demo, {
-    d <- load_demo_data(data_dir)
+    dataset_id <- input$dataset
+    if (is.null(dataset_id) || !dataset_id %in% names(DATASETS)) dataset_id <- "general"
+    folder <- file.path(data_dir, DATASETS[[dataset_id]])
+    display_name <- DATASET_LABELS[[dataset_id]]
+    d <- load_demo_data(folder)
     if (is.null(d$readings)) {
-      showNotification("Demo data not found. Expected data/readings.csv next to the app folder.", type = "error")
+      showNotification(paste0("Demo data not found in ", folder, ". Expected readings.csv, inventory.csv and generator_log.csv."),
+                       type = "error")
       return()
     }
     rv$readings <- d$readings
     rv$inventory <- d$inventory
     rv$backup_generator <- d$generator
-    rv$from_readings <- rv$from_inventory <- rv$from_backup_generator <- "demo data"
-    showNotification("Demo data loaded.", type = "message")
+    rv$from_readings <- rv$from_inventory <- rv$from_backup_generator <- display_name
+    showNotification(paste0("Loaded ", display_name, "."), type = "message")
   })
 
   output$data_status <- renderUI({
@@ -608,7 +625,7 @@ server <- function(input, output, session) {
 
   output$overview_boxes <- renderUI({
     if (length(analyses()) == 0) {
-      return(tags$div(class = "alert alert-info", "No readings loaded. Open the Data page and press Load demo data."))
+      return(tags$div(class = "alert alert-info", "No readings loaded. Open the Data page and press Load dataset."))
     }
     s <- summary_numbers()
     over <- isTRUE(s$last_transfer > 10)

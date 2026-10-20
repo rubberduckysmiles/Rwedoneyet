@@ -71,7 +71,7 @@ rsconnect::connectApiUser(account = account, server = server_name,
 app_files <- c(
   "app.R", "qc.R",
   file.path("R", list.files("app/R", pattern = "\\.[Rr]$")),
-  file.path("data", list.files("app/data", pattern = "\\.csv$"))
+  file.path("data", list.files("app/data", pattern = "\\.csv$", recursive = TRUE))
 )
 
 deployed <- rsconnect::deployApp(

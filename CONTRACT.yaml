@@ -959,3 +959,21 @@ tasks:
       sparklines with an untitled y-axis and six stat columns per card, and the
       Mean and Std dev values agree with demo/show_numbers.R.
     result: ""
+  - id: H-31
+    title: "Scenario picker on the Data page"
+    points: "tool depth: the manager can switch between the general demo and the two scenario sets"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["app/app.R", "app/data/", "app/manifest.json", "app/manifestme.R", "app/deployme.R", "tests/test-app_scenario_picker.R"]
+    notes: >
+      Adds a selectInput on the Data page for General demo, Scenario one good and
+      Scenario one bad, loads the chosen folder through load_demo_data(), and
+      mirrors the scenario folders into app/data for Posit Connect. File lists
+      in manifestme.R and deployme.R become recursive. Statistics stay in app/R/.
+    definition_of_done: >
+      Rscript -e "testthat::test_dir('tests')" passes with 0 failures; app.R
+      parses; the picker choices resolve to existing folders; app/data mirrors
+      data/ byte for byte; and manifest checksums match.
+    result: "Scenario picker added on Data page; scenario folders mirrored into app/data; file lists made recursive; tests PASS 1007 (was 974, +33); WORKFLOW OK and DEMO OK; app.R and 6 CSV checksums refreshed (22 files total, all match)."
+
