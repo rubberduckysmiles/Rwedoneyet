@@ -1252,3 +1252,96 @@ tasks:
       out of scope: toggling the theme after load leaves the already-drawn charts in the old colour, and
       the deployed main app - without this change - does the same, so it is neither caused nor worsened by
       H-36.
+
+  - id: H-37
+    title: "Capability formatting: colour the Capability page's value boxes by their value, the same way the Overview boxes are coloured"
+    points: "tool clarity: on the Capability page the numbers that decide whether a fridge is fit to hold blood look the same whether they are good or bad"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-capability_formatting.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, on the "CapabilityFormatting" branch.
+      The Overview page colours its three counts by value (H-36); this asks for
+      the same treatment on the Capability page, which has SIX value boxes in
+      two cards. Colour only: no number, threshold, limit or badge moves, and no
+      statistic changes. Three decisions the team made rather than the agent:
+      (1) all six boxes are coloured, and every one is NA-safe the way the
+      Overview's Average Ppk is - a fridge with no usable baseline limits yet is
+      neither good nor bad, so it keeps the default colour; (2) "Last transfer"
+      uses the team-chosen 10 s threshold, NOT the generator chart's own upper
+      control limit (13.83 s on the demo), so the Capability card and the
+      Overview box always agree; (3) "Typical transfer" is the chart's centre
+      line and is judged against the same 10 s. The rules:
+        Cpk (short-term sigma)  >= 1 green, < 1 red, NA uncoloured.
+        Ppk (overall sigma)     >= 1 green, < 1 red, NA uncoloured.
+        Gap (Cpk minus Ppk)     |Gap| < 0.10 green, |Gap| >= 0.10 red, NA
+                                uncoloured. MAGNITUDE, not sign: Gap is signed
+                                and negative on the demo (F01 -0.06, F05 -0.17,
+                                F06 -0.17, meaning Ppk > Cpk), and the caption
+                                describes a near-zero Gap as steady without
+                                saying which way is bad. Treating an equal
+                                negative and positive Gap alike is the reading
+                                that matches "a stability signal, not a score".
+                                That is a judgement the team made on the record,
+                                not a formula from the textbook, and the
+                                threshold 0.10 is a team-chosen visual guide.
+        Last transfer           <= 10 s green, > 10 s red (the Overview rule).
+        Typical transfer        <= 10 s green, > 10 s red.
+        Tests beyond limits     0 green, >= 1 red.
+      The demo only ever shows the green half for Cpk and Ppk: all six fridges
+      sit at Cpk 4.95-6.28 and Ppk 5.12-6.13, far above 1. Gap, Last transfer
+      (48.0 s against a 10 s line) and Tests beyond (1 against 0) do show red on
+      the demo, so those three are visible without construction. The team chose
+      not to add a failing demo dataset, so the Cpk- and Ppk-below-1 cases are
+      constructed inside the tests by driving the boxes with a controlled
+      analysis result, exactly as H-36's tests construct the zero-count and
+      below-1-Ppk cases. Without that, the Cpk and Ppk assertions would pass on
+      code that could never turn red.
+    definition_of_done: >
+      On the Capability page, all six value boxes carry the class their value
+      earns - the three capability boxes (Cpk, Ppk, Gap) and the three generator
+      boxes (Last transfer, Typical transfer, Tests beyond the limits) - with the
+      red class above the line and the green class at or below it, and the
+      default class when the value is NA, asserted by rendering the boxes through
+      the real server for the demo's real numbers AND for constructed cases that
+      force each red branch. No caption, number, threshold or statistic changes:
+      the demo still prints Cpk 6.15 / Ppk 5.86 for F02 and the generator still
+      reports last 48.0 s, typical 7.55 s, 1 beyond. testthat prints 0 failures
+      with the new assertions added and no existing one weakened, and a negative
+      control confirms the new test file fails when a box loses its colour or a
+      boundary flips. DEMO OK and WORKFLOW OK still print with every published
+      number unchanged, README.md and Demo.md describe the colours, and
+      app/manifest.json's app.R checksum is refreshed by hand as md5 of the
+      LF-normalised bytes with all bundled checksums matching.
+    result: >
+      All six Capability value boxes are now coloured by their value, and the colours are proven able to
+      change rather than only proven to be green. The rules: Cpk and Ppk green at or above 1 and red
+      below, NA uncoloured; Gap green while |Gap| < 0.10 and red once it is not, judged by magnitude so an
+      equal negative and positive Gap agree; last and typical transfer green at or below the team-chosen
+      10 s line and red above; tests beyond the limits green at zero and red above. Because
+      bslib::value_box() has no argument for a class on its number, the value is wrapped in a span via
+      box_value(); bslib keeps its own value-box-value class, so the box looks the same and only the
+      colour changes. Verified in a real browser on the running app: F01 renders Cpk 5.47 / Ppk 5.54 / Gap
+      -0.06 all rgb(46,158,107) green with last transfer 48.0 and 1 test beyond in rgb(214,64,69) red;
+      switching to F02 renders Gap +0.29 as rgb(214,64,69) red, which is the sign-symmetry rule showing
+      both directions on real data. The demo only ever shows the green half for Cpk and Ppk - all six
+      fridges sit at Cpk 4.95-6.28 and Ppk 5.12-6.13, far above the line at 1 - so a test that read only
+      the demo would pass on a box wired permanently to green. The red branches are therefore driven
+      through the app's own expressions by stubbing analyze_all() and generator_stats() before the server
+      starts, not by re-typing the rules; the team chose not to add a failing demo dataset, and this is
+      the substitute that keeps the test able to fail. Six negative controls each confirmed to fail the
+      new file: the Cpk box losing its colour FAIL 4, the Cpk boundary flipped from >= to > FAIL 2, Gap
+      switched from magnitude to a signed rule FAIL 2, the generator switched to the control limit instead
+      of the 10 s line FAIL 2, NA no longer uncoloured FAIL 2, and the tests-beyond count flipped FAIL 3.
+      The generator test is the one that separates the two possible rules: 12 s is above the team's 10 s
+      line but below the chart's own 13.83 s control limit, so it must read red. Quoted: tests/test-
+      capability_formatting.R FAIL 0 | WARN 0 | SKIP 0 | PASS 42, the full suite FAIL 0 | WARN 0 | SKIP 0
+      | PASS 1311 (was 1265), app/workflow.R WORKFLOW OK, and demo/show_numbers.R DEMO OK. Colour only,
+      and the numbers prove it: F02 still reports Cpk 6.1514, Ppk 5.8636, Gap 0.2878 and the generator
+      last 48.0 s, typical 7.55 s, beyond 1, ucl 13.8300, identical to before this task. README.md and
+      Demo.md describe every colour rule and record that the Gap magnitude reading and its 0.10 line are
+      the team's own decisions rather than a textbook threshold. app/manifest.json's app.R checksum moved
+      from 172d6cf7eb004d18ac9c919bb9069ab4 to ae694c270841b6648fbd8659f2c93b7e in a one-line diff that
+      preserves the file's CRLF and trailing newline; all 22 bundled checksums match and the platform is
+      unchanged at 4.5.2.
