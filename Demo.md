@@ -34,7 +34,7 @@ Rscript app/workflow.R
 ### 3) Capability
 - Cpk, Ppk, Gap with plain captions; histogram (1 °C, 3.5 °C target, 6 °C) noting spec vs control limits
 - Rolling 24-hour Ppk (96 readings = 24h at 15m); falling line means worsening
-- Backup generator stats (last/typical, beyond limits, switchover) — transfer time is seconds from power loss to load
+- Backup generator stats (last/typical, beyond limits) — transfer time is seconds from power loss to load
 - 10 s line is team-chosen threshold (not spec or control limit)
 
 ### 4) Backup generator

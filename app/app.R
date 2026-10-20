@@ -826,8 +826,6 @@ server <- function(input, output, session) {
         tags$p(class = "text-muted small mb-0",
                "No backup generator log loaded. Add one on the Data page to see the backup power statistics here."))
     } else {
-      switchover <- if (is.na(gs$in_control)) "cannot say" else
-        if (gs$in_control) "in control" else "investigate"
       bslib::card(fill = FALSE,
         tags$h5(class = "mb-1", "Backup generator"),
         tags$p(class = "text-muted small",
@@ -836,17 +834,13 @@ server <- function(input, output, session) {
                 "power failing and the backup generator picking up the load, and during that",
                 "gap nothing is cooling, so the bags are exposed for exactly that long.")),
         bslib::layout_columns(
-          fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 3),
+          fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
           bslib::value_box("Last transfer", fmt_num(gs$last, 1),
                            tags$small("seconds, from the most recent test")),
           bslib::value_box("Typical transfer", fmt_num(gs$typical, 1),
                            tags$small("seconds, the center of the chart")),
           bslib::value_box("Tests beyond the limits", sprintf("%d", gs$beyond),
-                           tags$small(sprintf("of %d tests run", gs$n))),
-          bslib::value_box("Switchover", switchover,
-                           tags$small(if (is.na(gs$in_control)) gs$message
-                                      else if (gs$in_control) "every test inside the limits"
-                                      else sprintf("%d of %d tests beyond the limits", gs$beyond, gs$n)))
+                           tags$small(sprintf("of %d tests run", gs$n)))
         ),
         tags$p(class = "text-muted small mb-0",
                "The 10 s line is a threshold the team chose, not a control limit."))

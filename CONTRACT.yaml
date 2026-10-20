@@ -1040,3 +1040,48 @@ tasks:
       that changed, refreshed by hand as md5 of the LF-normalised bytes.
     result: "The card sentence now comes from the badge's own 24-hour window, so a green card can no longer announce a shift and an amber card can no longer be unexplainable. Quoted against the shipped demo, app/data: F01 green and F04 green both read 'No special-cause flag.' where they previously read 'Nine points in a row on one side of the center. The fridge has shifted.' (subgroup 94, three days stale) and 'Two of three points beyond 2 sigma, on the same side. A shift is starting.' (subgroup 137, outside the window); F05 amber reads 'Nine points in a row on one side of the center. The fridge has shifted.' from subgroup 152, which names test 2 as the reason it is amber. Every sentence's subgroup now falls inside (144, 168]. No verdict and no number moved: needing action stays 4 of 6, units at risk 283, and Cpk, Ppk, RPN, severity, occurrence, urgency and hours are asserted unchanged in the new test. The new tests/test-flag_sentence.R fails against the old code with FAIL 10 | PASS 32 - including 137.0 <= 144.0 and 94.0 <= 144.0 for the two stale sentences - and passes against the new with FAIL 0 | WARN 0 | SKIP 0 | PASS 44. The full suite prints FAIL 61 | WARN 0 | SKIP 0 | PASS 1007 and DEMO OK, WORKFLOW OK and 'every fridge agrees with the shipped badge' all still print; the 61 failures are the pre-existing data/readings.csv breakage from the pull, unchanged in file and count from the main baseline measured before this work, and this task adds 44 passing assertions and removes none. app/app.R was not touched, so its checksum stays ad326dc3c4368650c3d3bc6ed8f7b9c1; R/monitor.R moved from 492d69f66899dfa5ca0c755240d5475a to 6f88c65c8ef112563927b63b286346f6; all 22 manifest checksums match, platform 4.5.2. README.md gained the two-sentences-two-scopes paragraph, docs/plan.md a line under the badge rule plus risk 4 recording that an untested output is where the contradiction survived, and demo/README.md a per-fridge card-sentence column."
 
+  - id: H-33
+    title: "Remove the Switchover value box from the Backup generator card on the Capability tab"
+    points: "tool clarity: one verdict, shown once, where a manager can act on it"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-capability_generator.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The Capability tab's Backup
+      generator card carried four value boxes: Last transfer, Typical
+      transfer, Tests beyond the limits, and Switchover. The Switchover box
+      rendered in_control as a verdict word ("in control" / "investigate" /
+      "cannot say") with a caption repeating the beyond-the-limits count.
+      The team asked for that fourth box to go, because the "Tests beyond
+      the limits" box already carries the same information - its count is
+      exactly what decides in_control - and showing one verdict twice on one
+      card invites the two displays to disagree.
+      What to do: delete the box and its caption, and delete the now-dead
+      switchover local that only fed it; widen the remaining three boxes from
+      md = 3 to md = 4 so they still fill the row. in_control itself is NOT
+      dead: generator_stats() still returns it, the Backup generator page
+      still uses it, and its own tests must stay untouched. Update the tests
+      that asserted the removed wording to assert the removal instead, and
+      correct every document that described the box, so no document claims a
+      card that no longer exists.
+      Do NOT change any statistic: last, typical, ucl, beyond, n, in_control
+      and message are all unchanged, and generator_stats() computes nothing
+      new or less.
+    definition_of_done: >
+      The Capability tab's Backup generator card renders three value boxes -
+      Last transfer, Typical transfer, Tests beyond the limits - and no
+      Switchover box; a rendered-UI check prints FALSE for "Switchover",
+      "in control" and "investigate" and TRUE for the three surviving box
+      titles and the demo's 48.0, and the three boxes carry col_widths
+      md = 4. in_control is unchanged and still tested: generator_stats()
+      returns the same value and test-capability_generator.R still asserts
+      it, including the NA-not-TRUE case for limits that could not be drawn.
+      testthat prints 0 failures, DEMO OK and WORKFLOW OK still print, and
+      the needing-action count and every published number are unchanged.
+      README.md no longer offers a switchover verdict on that card and says
+      where the verdict now lives, Demo.md's Capability line no longer lists
+      switchover, and app/manifest.json's app.R checksum is refreshed by hand
+      as md5 of the LF-normalised bytes with all bundled checksums matching.
+    result: "The fourth value box is gone from the Capability tab's Backup generator card, so that card now shows three boxes - Last transfer, Typical transfer, Tests beyond the limits - at col_widths md = 4, and the in_control verdict is shown once, on the Backup generator page where it was already. A rendered-UI check of output$capability_top prints Switchover FALSE, 'in control' FALSE, 'investigate' FALSE, and TRUE for 'Last transfer', 'Typical transfer', 'Tests beyond the limits' and the demo's 48.0. The switchover local was dead once the box went and was deleted with it; git grep finds no switchover or in_control left in app/app.R. No statistic moved: generator_stats() still returns last, typical, ucl, beyond, in_control, n and message unchanged, and in_control keeps its own tests, including the NA case when imr_limits refuses to draw limits - the demo log still gives last 48.0 s, typical 7.5 s, 1 of 30 tests beyond the limits and in_control FALSE. tests/test-capability_generator.R now asserts the removal (no Switchover, no 'every test inside the limits', no 'investigate' on the card) instead of asserting the removed wording, and still asserts in_control is computed; that file prints FAIL 0 | WARN 0 | SKIP 0 | PASS 55 and the full suite prints FAIL 0 | WARN 0 | SKIP 0 | PASS 1069, with DEMO OK and WORKFLOW OK still printing. README.md's Capability-tab table drops the switchover row from the card while keeping the in_control explanation and naming the Backup generator tab as where the verdict lives, its generator-stats section says the Capability tab repeats the transfer numbers and the Backup generator tab carries the verdict, and its demo-numbers paragraph no longer claims a switchover verdict on that card; Demo.md's Capability line drops switchover. app/manifest.json's app.R checksum moved from ad326dc3c4368650c3d3bc6ed8f7b9c1 to 98453960290d24294eb2d93edfcabb26, refreshed by hand as md5 of the LF-normalised bytes; all 22 bundled checksums match, platform 4.5.2."
+

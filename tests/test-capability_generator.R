@@ -175,23 +175,24 @@ test_that("the Capability tab shows the generator statistics and what a generato
       expect_match(html, sprintf("%d", s$beyond), fixed = TRUE,
                    info = "count beyond the limits shown")
 
-      # The Switchover value and its caption must say the same thing. The demo
-      # log has one test (48.0 s) beyond the upper limit, so this card must not
-      # claim every test is inside the limits.
-      if (!is.na(s$in_control) && !s$in_control) {
-        expect_match(html, "investigate", fixed = TRUE)
-        expect_match(html, sprintf("%d of %d tests beyond the limits", s$beyond, s$n),
-                     fixed = TRUE, info = "the caption must name the tests beyond the limits")
-        expect_false(grepl("every test inside the limits", html, fixed = TRUE),
-                     info = "cannot say every test is inside when one is beyond")
-      }
+      # The Switchover value box was removed from this card, so the strip must no
+      # longer carry its wording. in_control itself is still a statistic and is
+      # still tested above; only its display on the Capability tab is gone.
+      expect_false(grepl("Switchover", html, fixed = TRUE),
+                   info = "the Switchover box must not be rendered on the Capability tab")
+      expect_false(grepl("every test inside the limits", html, fixed = TRUE),
+                   info = "the removed caption must not survive anywhere on the card")
+      expect_false(grepl("investigate", html, fixed = TRUE),
+                   info = "the removed verdict must not survive anywhere on the card")
     }
   })
 })
 
-test_that("the Switchover caption says every test is inside the limits only when none is beyond", {
+test_that("in_control is still computed even though the Capability tab no longer shows it", {
   shiny::testServer(app_env$server, {
-    # Ordinary wiggle around 6.8 s: nothing near a limit.
+    # Ordinary wiggle around 6.8 s: nothing near a limit. The fixture still
+    # exercises in_control, which the Backup generator page and generator_stats()
+    # keep exposing; only the Capability tab's value box was removed.
     rv$backup_generator <- data.frame(
       date = sprintf("2026-09-%02d", 1:30),
       transfer_time_sec = rep(c(6, 7, 6.5, 7.5, 6.2, 7.1, 6.8, 7.3, 6.4, 7.0), 3),
@@ -200,8 +201,11 @@ test_that("the Switchover caption says every test is inside the limits only when
     html <- paste(unlist(output$capability_top), collapse = " ")
     s <- generator_stats(gen())
     expect_true(isTRUE(s$in_control), info = "the fixture must be in control")
-    expect_match(html, "in control", fixed = TRUE)
-    expect_match(html, "every test inside the limits", fixed = TRUE)
+    # The statistic is unchanged and still available...
+    expect_true(isTRUE(generator_stats(gen())$in_control))
+    # ...but the card no longer renders its verdict as a value box.
+    expect_false(grepl("Switchover", html, fixed = TRUE))
+    expect_false(grepl("in control", html, fixed = TRUE))
   })
 })
 
