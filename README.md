@@ -60,10 +60,12 @@ The badge colors mean the action, and nothing else uses them:
 
 | Badge | Meaning | Rule |
 |---|---|---|
-| Red | Act this shift | Any reading in the last 24 hours is outside 1–6 °C, or X-bar test 1 fired after the baseline. |
-| Amber | Watch | Any other special-cause test fired after the baseline, or Cpk is below 1.0, or the forecast crosses 1 °C or 6 °C within 12 hours. |
+| Red | Act this shift | Any reading in the last 24 hours is outside 1–6 °C, or two X-bar test-1 points in a row inside that 24 hours. |
+| Amber | Watch | Two special-cause flags in the last 24 hours, or Cpk is below 1.0, or the forecast crosses 1 °C or 6 °C within 12 hours. |
 | Green | Leave it | None of the above. |
 | Gray | No limits yet | Fewer than 25 complete baseline subgroups, and the fridge is not already red. |
+
+The badge looks at the **last 24 hours** — the same day-long window that decides which bags are at risk — and red or amber need more than one flag inside it. That is a deliberate decision, not a leftover. Eight special-cause tests run on about 120 post-baseline hours, so a test firing somewhere on a healthy fridge is close to certain; simulation says a healthy fleet would show **92% red or amber** if a single flag were enough, and **15.5%** with the rule above, while a fridge that really drifts out of range is still red 100% of the time. `demo/alert_rate.R` runs that measurement and prints it; `data/README.md` holds the numbers and the one cost of the rule (a fault that resolved one to two days ago ages out of the window).
 
 The capability sentence uses the course threshold of 1.0:
 
@@ -175,11 +177,13 @@ Three SE is wide on purpose. For a stable, roughly normal process about 99.7% of
 
 A point past the X-bar limits, after the baseline, has three consequences, and they are the consequences that matter:
 
-- the fridge's badge goes **red** (`analyze_fridge`, the `test1_post` branch);
-- if it happened within the last 24 hours, every bag in that fridge counts as a **unit at risk** (`units_at_risk`);
+- the fridge's badge goes **red** when two test-1 points sit in a row inside the last 24 hours (`analyze_fridge`); one lone point leaves the badge alone;
+- if any point past those limits happened within the last 24 hours, every bag in that fridge counts as a **unit at risk** (`units_at_risk`) — the bag count needs one recent flag, the badge needs two;
 - a row appears in the **violations table**, carrying the hour and the test's plain-English meaning.
 
-A point past the **range** limits is a different finding: the four readings in that hour disagree with each other. It does not make the fridge red, because `any_flag_post` puts it at **amber**, but a recent one still counts toward units at risk.
+A point past the **range** limits is a different finding: the four readings in that hour disagree with each other. It counts as one of the two flags the amber badge needs (`flags_recent`), and a recent one counts toward units at risk. Every post-baseline flag also decides the capability sentence above the badge: `any_flag_post` is true if anything at all fired after the baseline, so the sentence reads "inside the spec width, but not stable" — stability is a claim about the whole chart, not about this shift.
+
+The one-line **card sentence** on the Overview is a narrower claim than the capability sentence, and it is deliberately tied to the same 24 hours the badge and the bag count use. It reports the plain-English meaning of the newest flag inside that window (`flag_sentence`); a fridge with a clean window reads "No special-cause flag." even when older flags keep the capability sentence saying "not stable". Two sentences, two scopes: the card sentence is about this shift, the capability sentence is about the whole chart. Without that split the card contradicted its own badge — in the demo, green F01's nearest flag was three days before the last reading, yet the card announced a shift, and amber F05 carried the same sentence as green F01, so nothing on the card explained why F05 was amber at all.
 
 **Control limits are not spec limits.** Control limits describe what this fridge does. The spec limits, 1 °C and 6 °C, describe what red blood cells need. A fridge can be perfectly in control at the wrong temperature, and it can be out of control while every reading is still inside the spec. The app keeps the two apart on purpose.
 

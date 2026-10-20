@@ -861,10 +861,10 @@ tasks:
   - id: H-28
     title: "Stop the badge crying wolf: act on the last day, and never on one lone flag"
     points: "the graded core: the tool must rank the fridge that really needs this shift"
-    status: todo
-    owner: ""
-    started_at: ""
-    owns: ["app/R/monitor.R", "app/app.R", "app/manifest.json", "demo/alert_rate.R", "tests/test-scenarios.R", "README.md", "docs/plan.md", "demo/README.md", "data/README.md", "hi_friends.md"]
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["app/R/monitor.R", "app/app.R", "app/manifest.json", "demo/alert_rate.R", "tests/test-scenarios.R", "tests/test-sd_chart.R", "README.md", "docs/plan.md", "demo/README.md", "data/README.md", "hi_friends.md"]
     notes: >
       H-26 measured five aggregation rules and the team chose rec_run on
       2026-10-19: the badge acts on the last 24 subgroups only, the same window
@@ -898,6 +898,11 @@ tasks:
       mostly green with no reds, and a simulated real drift 100% red. Refresh the
       manifest checksums for every bundled file that changes, by hand, md5 of the
       LF-normalised bytes, the H-24 mechanic.
+      Owns extended by one file: tests/test-sd_chart.R hard-codes the demo
+      statuses to prove the display-only s-chart moved nothing, so its four
+      status values are re-captured here. tests/test-scenarios.R also gains one
+      purpose-built fridge that isolates the two-in-a-row branch, because none
+      of the three committed readings files reaches it.
     definition_of_done: >
       app/R/monitor.R implements the rule above and nothing else about the
       statistics changes; Rscript demo/alert_rate.R prints 'every fridge agrees
@@ -911,7 +916,7 @@ tasks:
       numbers rather than the old ones; git grep finds no statement of the old
       rule left behind; all 16 manifest checksums match; and the live app's
       Overview shows the new counts.
-    result: ""
+    result: "The badge acts on the last day and never on one lone flag: red needs a reading outside 1-6 C or two X-bar test-1 points in a row inside the last 24 hourly subgroups, amber needs two distinct flags in that window, Cpk < 1, or a forecast crossing within 12 hours, and green is otherwise; gray (no baseline limits) is still checked after red. The window is shared with units_at_risk, so the badge and the bag count can no longer disagree. Quoted from demo/alert_rate.R over 200 simulated healthy fridges, seed 5300: needing action falls from 92.0% (27.5% red) under the previous rule to 15.5% with 0% red under the shipped one, while a simulated real drift and a real step stay 100% red, so no detection was traded away. On the committed files needing action goes demo 6/6 to 4 of 6 (F02 red, F03 red, F06 amber, F05 amber, F04 green, F01 green), scenario_one_bad 5/6 to 2/6 and scenario_one_good 5/6 to 2/6; units at risk stay 283 on the demo, and every per-fridge Cpk, Ppk, RPN, severity, occurrence, urgency and hours number is unchanged, so the rule moved verdicts and nothing else. The accepted cost is documented rather than hidden: the demo's F04 blackout is 2026-10-06 14:00-16:00, more than a day before the last reading, so F04 goes green - which makes the badge agree with the bag count, because units_at_risk already used that window and already reported F04 with 0 bags at risk. any_flag_post keeps its whole-chart meaning for the capability sentence, so a green fridge can still read 'inside the spec width, but not stable'; the unused test1_post was deleted. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 1068, demo/show_numbers.R printed DEMO OK with 4 fridges needing action and 283 bags at risk, app/workflow.R printed WORKFLOW OK, and demo/alert_rate.R printed 'every fridge agrees with the shipped badge'. All 22 manifest checksums match, platform 4.5.2, R/monitor.R refreshed by hand as md5 of the LF-normalised bytes. README.md, docs/plan.md, demo/README.md, data/README.md and hi_friends.md state the shipped rule and the re-measured numbers, and git grep finds no statement of the old rule left behind beyond the deliberate previous/first-rule comparison in demo/alert_rate.R."
 
   - id: H-29
     title: "Make Demo.md readable on GitHub, and point demo/README.md at the alert-rate script"
@@ -976,4 +981,62 @@ tasks:
       parses; the picker choices resolve to existing folders; app/data mirrors
       data/ byte for byte; and manifest checksums match.
     result: "Scenario picker added on Data page; scenario folders mirrored into app/data; file lists made recursive; tests PASS 1007 (was 974, +33); WORKFLOW OK and DEMO OK; app.R and 6 CSV checksums refreshed (22 files total, all match)."
+
+  - id: H-32
+    title: "Make the card sentence describe the day the badge judged"
+    points: "tool depth: a manager reads the card and sees a sentence that agrees with the badge beside it"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/R/monitor.R", "app/app.R", "app/manifest.json", "tests/test-flag_sentence.R", "README.md", "docs/plan.md", "demo/README.md"]
+    notes: >
+      PROPOSED, not started. Found while explaining the badge rules on
+      2026-10-20. flag_sentence is the meaning of the most recent flag ANYWHERE
+      after the baseline, so it ignores the 24-hour window the badge and
+      units_at_risk both use. On the shipped demo data, app/data/, the Overview
+      cards contradict their own badges:
+      F01 is green and says "Nine points in a row on one side of the center. The
+      fridge has shifted." - that flag is subgroup 94, three days before the last
+      reading, and there are no flags in the window at all. F04 is green and says
+      "Two of three points beyond 2 sigma, on the same side. A shift is starting."
+      - subgroup 137, outside the window, again with no flag in the window. F05 is
+      amber and its sentence is the same nine-points sentence as F01, so the card
+      gives no way to tell an amber fridge from a green one.
+      The F05 case that started this: F05's amber comes from ONE test-2 run,
+      subgroups 141-152, twelve points above center when test 2 needs nine.
+      run_end_positions flags every point from the ninth on, so subgroups 151 and
+      152 are counted as two distinct flags and trip the "two flags" amber
+      branch. The team decided on 2026-10-20 to KEEP the shipped rule and every
+      number it produces, because a twelve-hour shift is a real finding and H-26
+      measured this rule at 15.5% false alarms; the defect is the explanation, not
+      the rule. So this task must change no verdict and no published number.
+      What to do: give flag_sentence the same window the badge uses (recent_start)
+      so the sentence describes a flag the badge could have counted, and say so
+      when the window is clean even though the chart is not - a green fridge whose
+      stability claim still comes from any_flag_post should read as stable now
+      without pretending the whole chart is clean. Keep the sentence about the
+      most recent in-window flag and its meaning, and keep the
+      "No special-cause flag." wording for a fridge with none.
+      flag_sentence is currently untested and undocumented: no test asserts it and
+      no README describes it, which is why this survived. Add tests/test-flag_sentence.R
+      that pins the three cases above (green F01 and F04 sentence must not claim a
+      shift; amber F05 must name the test that made it amber).
+      Do NOT change the badge branches, units_at_risk, RPN, Cpk, Ppk or the
+      capability sentence: any_flag_post keeps its whole-chart meaning on purpose.
+    definition_of_done: >
+      Every fridge's card sentence on the Overview agrees with its own badge:
+      quoting app/data/, F01 and F04 are green and their sentences no longer claim
+      a shift or a starting shift, while F05 is amber and its sentence names
+      test 2 (nine points in a row on one side of the center); a direct check
+      prints for each of the six fridges the status, the sentence, and the
+      subgroup the sentence came from, and every sentence's subgroup is inside
+      (n_sub - 24, n_sub]. The per-fridge Cpk, Ppk, RPN, severity, occurrence,
+      urgency, hours and units_at_risk in demo/README.md are unchanged, and the
+      needing-action count is unchanged at 4 of 6 - this task moves no verdict.
+      The new tests/test-flag_sentence.R fails against the old code and passes
+      against the new, and testthat prints 0 failures. README.md, docs/plan.md and
+      demo/README.md describe the sentence as being about the same 24 hours the
+      badge uses, and the app/manifest.json checksums match for every bundled file
+      that changed, refreshed by hand as md5 of the LF-normalised bytes.
+    result: "The card sentence now comes from the badge's own 24-hour window, so a green card can no longer announce a shift and an amber card can no longer be unexplainable. Quoted against the shipped demo, app/data: F01 green and F04 green both read 'No special-cause flag.' where they previously read 'Nine points in a row on one side of the center. The fridge has shifted.' (subgroup 94, three days stale) and 'Two of three points beyond 2 sigma, on the same side. A shift is starting.' (subgroup 137, outside the window); F05 amber reads 'Nine points in a row on one side of the center. The fridge has shifted.' from subgroup 152, which names test 2 as the reason it is amber. Every sentence's subgroup now falls inside (144, 168]. No verdict and no number moved: needing action stays 4 of 6, units at risk 283, and Cpk, Ppk, RPN, severity, occurrence, urgency and hours are asserted unchanged in the new test. The new tests/test-flag_sentence.R fails against the old code with FAIL 10 | PASS 32 - including 137.0 <= 144.0 and 94.0 <= 144.0 for the two stale sentences - and passes against the new with FAIL 0 | WARN 0 | SKIP 0 | PASS 44. The full suite prints FAIL 61 | WARN 0 | SKIP 0 | PASS 1007 and DEMO OK, WORKFLOW OK and 'every fridge agrees with the shipped badge' all still print; the 61 failures are the pre-existing data/readings.csv breakage from the pull, unchanged in file and count from the main baseline measured before this work, and this task adds 44 passing assertions and removes none. app/app.R was not touched, so its checksum stays ad326dc3c4368650c3d3bc6ed8f7b9c1; R/monitor.R moved from 492d69f66899dfa5ca0c755240d5475a to 6f88c65c8ef112563927b63b286346f6; all 22 manifest checksums match, platform 4.5.2. README.md gained the two-sentences-two-scopes paragraph, docs/plan.md a line under the badge rule plus risk 4 recording that an untested output is where the contradiction survived, and demo/README.md a per-fridge card-sentence column."
 

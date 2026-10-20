@@ -1,28 +1,30 @@
-# alert_rate.R - what the badge would say under four aggregation rules.
+# alert_rate.R - what the badge said before, and what it says now.
 #
 # H-25 found that data/scenario_one_bad has nothing outside 1-6 C yet the monitor
-# reports 5 of 6 fridges needing action, and that 200 simulated HEALTHY fridges give
+# reported 5 of 6 fridges needing action, and that 200 simulated HEALTHY fridges gave
 # 92.0% with a post-baseline flag, 64.5% amber and 27.5% red. The eight special-cause
-# tests are each right; the aggregation is what makes a healthy fleet look busy. The
-# badge in app/R/monitor.R turns amber on ANY single post-baseline flag and red on any
-# single test-1 point or any of the last 96 readings out of range.
+# tests are each right; the aggregation was what made a healthy fleet look busy.
 #
-# Before anyone changes that rule, this script measures what the alternatives would do.
-# It changes nothing under app/: each candidate rule is applied here to the analysis
-# objects analyze_fridge() already returns, so the numbers below are the app's own
-# statistics under a different decision rule.
+# H-28 acted on that measurement: the badge in app/R/monitor.R now uses the rec_run
+# rule below. The old rule is kept here as `previous` so the change can be measured
+# instead of asserted, and the self-check in section 3 proves this script's copy of
+# rec_run still agrees with analyze_fridge().
+#
+# This script changes nothing under app/: each candidate rule is applied here to the
+# analysis objects analyze_fridge() already returns, so the numbers below are the
+# app's own statistics under a different decision rule.
 #
 # Five rules, all of them still acting on the same eight tests:
-#   current     what ships today: red on one test-1 point or an out-of-range reading in
-#               the last 24 h; amber on any single post-baseline flag, Cpk < 1 or a
-#               forecast of 12 hours or less to the spec limit.
+#   previous    what shipped before H-28: red on one test-1 point or an out-of-range
+#               reading in the last 24 h; amber on any single post-baseline flag,
+#               Cpk < 1 or a forecast of 12 hours or less to the spec limit.
 #   run2        a single isolated flag is not enough: red needs two test-1 points in a
 #               row, amber needs two flags in a row or three flags anywhere.
 #   last24      only the last 24 subgroups (one day) can set the badge, the window the
 #               app already uses to decide which bags are at risk: red needs two test-1
 #               points in that day, amber needs any flag in it.
-#   rec_run     the same day-long window, but amber needs two flags in it, or two in a
-#               row, rather than one flag.
+#   rec_run     what ships now (H-28): the same day-long window, but amber needs two
+#               flags in it, or two in a row, rather than one flag.
 #   rec_2d      rec_run with a two-day window (48 subgroups), so an incident that is
 #               older than a day but younger than two still sets the badge.
 # Cpk < 1 and a forecast of 12 hours or less keep their amber weight in every rule, so
@@ -75,7 +77,7 @@ run_of <- function(idx, k) {
   }, logical(1)))
 }
 
-# ---- the four rules ------------------------------------------------------------------------------
+# ---- the five rules ------------------------------------------------------------------------------
 
 verdict <- function(a, red, amber) {
   if (!a$has_limits) return("gray")
@@ -84,7 +86,7 @@ verdict <- function(a, red, amber) {
   "green"
 }
 
-rule_current <- function(a) {
+rule_previous <- function(a) {
   verdict(a,
           red = out_last_24h(a) || length(test1_subgroups(a)) > 0,
           amber = length(flag_subgroups(a)) > 0 || isTRUE(a$cpk < 1) || soon(a))
@@ -127,7 +129,7 @@ rule_rec_2d <- function(a) {
   window_run(a, 48)
 }
 
-RULES <- list(current = rule_current, run2 = rule_run2,
+RULES <- list(previous = rule_previous, run2 = rule_run2,
               last24 = rule_last24, rec_run = rule_rec_run, rec_2d = rule_rec_2d)
 
 # ---- simulated populations -----------------------------------------------------------------------
@@ -214,15 +216,15 @@ for (d in names(file_analyses)) {
   cat("\n")
 }
 
-cat("3. SELF-CHECK - does the script's copy of the shipped rule agree with analyze_fridge()?\n\n")
+cat("3. SELF-CHECK - does the script's copy of rec_run agree with the shipped badge?\n\n")
 ok <- TRUE
 for (d in names(file_analyses)) {
   for (nm in names(file_analyses[[d]])) {
     a <- file_analyses[[d]][[nm]]
-    same <- identical(rule_current(a), a$status)
+    same <- identical(rule_rec_run(a), a$status)
     if (!same) {
       ok <- FALSE
-      cat("    MISMATCH", d, nm, ": script says", rule_current(a), "app says", a$status, "\n")
+      cat("    MISMATCH", d, nm, ": script says", rule_rec_run(a), "app says", a$status, "\n")
     }
   }
 }
@@ -235,6 +237,6 @@ cat("  range) is amber and F06 (readings above 6 C) is red under all five rules.
 cat("  The window is what the day-long rules buy and what they cost. In the demo file\n")
 cat("  F04's planted blackout runs on 2026-10-06 14:00 to 16:00, more than a day before\n")
 cat("  the last reading, so last24 and rec_run drop F04 to green while rec_2d keeps it\n")
-cat("  red. A resolved incident one to two days old is the case to argue about: the\n")
-cat("  shipped rule already calls F04's bags not at risk (units_at_risk uses the same\n")
-cat("  24-hour window), so rec_run makes the badge and the bag count agree.\n")
+cat("  red. A resolved incident one to two days old is the case to argue about. The\n")
+cat("  shipped rule and units_at_risk use the same 24-hour window, so for F04 the badge\n")
+cat("  and the bag count now agree instead of contradicting each other.\n")

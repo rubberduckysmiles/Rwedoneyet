@@ -125,6 +125,13 @@ keep_after <- function(indices, n_baseline) {
   indices[indices > n_baseline]
 }
 
+# TRUE when two of these subgroup numbers are adjacent, which is a run of two in a row:
+# the subgroup numbers are sequential, so "adjacent" means "the next hour".
+two_in_a_row <- function(indices) {
+  indices <- sort(as.integer(indices))
+  any(diff(indices) == 1L)
+}
+
 format_hours <- function(h) {
   if (length(h) != 1 || is.na(h)) return("\u2014")
   if (is.infinite(h)) return("no crossing")
@@ -219,7 +226,6 @@ analyze_fridge <- function(fridge_id, readings, blood_units = 0, subgroup_n = 4,
   post_xbar <- lapply(tests, function(t) keep_after(t$indices, n_base))
   post_range <- keep_after(range_test$indices, n_base)
   any_flag_post <- any(lengths(post_xbar) > 0) || length(post_range) > 0
-  test1_post <- length(post_xbar[[1]]) > 0
 
   # Forecast on post-baseline means only.
   post_means <- st$mean[st$subgroup > n_base]
@@ -238,27 +244,43 @@ analyze_fridge <- function(fridge_id, readings, blood_units = 0, subgroup_n = 4,
   ppk <- if (has_limits) fb$capability$ppk else NA_real_
   gap <- if (has_limits) fb$capability$gap else NA_real_
 
-  # Badge.
-  if (out_last_24h || test1_post) {
+  # Badge. Act on the last 24 subgroups (one day) - the same window that decides which bags
+  # are at risk - and never on one lone flag. Eight tests run on about 120 post-baseline
+  # subgroups, so "any flag anywhere" fires on nearly every healthy fridge: 92% of 200
+  # simulated healthy fleets under the old rule, 15.5% under this one (demo/alert_rate.R).
+  # Inside that day, red needs a reading outside 1-6 C or two test-1 points in a row, and
+  # amber needs two flags in the day. Cpk below 1 and a crossing within 12 hours still
+  # count, so a slow problem stays visible while it is still inside the spec width.
+  recent_start <- n_sub - 24
+  flags_post <- sort(unique(c(unlist(post_xbar), post_range)))
+  flags_recent <- flags_post[flags_post > recent_start]
+  if (out_last_24h || two_in_a_row(post_xbar[[1]][post_xbar[[1]] > recent_start])) {
     status <- "red"
   } else if (!has_limits) {
     status <- "gray"
-  } else if (any_flag_post || isTRUE(cpk < 1) || (is.finite(hours) && hours <= 12)) {
+  } else if (length(flags_recent) >= 2 || isTRUE(cpk < 1) || (is.finite(hours) && hours <= 12)) {
     status <- "amber"
   } else {
     status <- "green"
   }
 
-  # Units at risk: the bags in this fridge if it is out now, or any flag in the last 24 hourly subgroups.
-  recent_start <- n_sub - 24
+  # Units at risk: the bags in this fridge if it is out now, or any flag in the last 24 hourly
+  # subgroups. One recent flag is enough here even though the badge now needs two: the count is
+  # about bags exposed to a disturbance, not about which fridge the manager opens first.
   flag_last_24h <- any(unlist(post_xbar) > recent_start) || any(post_range > recent_start)
   units_at_risk <- if (latest_out || flag_last_24h) blood_units else 0
 
-  # Sentence for the card: the meaning of the most recent flag after the baseline.
-  monitored <- violations[violations$monitored, , drop = FALSE]
+  # Sentence for the card. It must describe the same day the badge judged, or the card
+  # contradicts the badge beside it: F01 and F04 are green here, and their nearest flags
+  # are subgroups 94 and 137, three days and two days before the last reading. The old
+  # sentence read the newest flag anywhere after the baseline, so those green cards
+  # claimed a shift. Report the newest flag INSIDE the window; when the window is clean,
+  # say so, even though any_flag_post may still keep the whole chart "not stable" in the
+  # capability sentence above.
+  in_window <- violations[violations$monitored & violations$subgroup > recent_start, , drop = FALSE]
   flag_sentence <- "No special-cause flag."
-  if (nrow(monitored) > 0) {
-    latest <- monitored[monitored$subgroup == max(monitored$subgroup), , drop = FALSE]
+  if (nrow(in_window) > 0) {
+    latest <- in_window[in_window$subgroup == max(in_window$subgroup), , drop = FALSE]
     flag_sentence <- latest$meaning[which.min(latest$test)]
   }
 

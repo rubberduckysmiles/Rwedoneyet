@@ -7,6 +7,10 @@
 # the same two calls app.R makes - and never assumed. If a file changes, or a statistic
 # moves, these expectations fail on purpose.
 #
+# H-28 changed the badge rule in app/R/monitor.R: red now needs a reading outside 1-6 C or
+# two test-1 points in a row inside the last day, and amber needs two flags in that day.
+# The verdicts below were re-measured under that rule - measured first, then written down.
+#
 # The names are labels, not descriptions: the "bad" set has nothing failing, and the
 # "good" set has no textbook failure either. What each set really is:
 #   bad  - negative control for the range check. Six fridges of common-cause noise,
@@ -148,16 +152,17 @@ test_that("scenario_one_good carries the awkward cases the codebook names", {
 test_that("the pipeline's verdicts on the bad set are the ones the files produce", {
   a <- analyses$bad
 
-  # No fridge is red, and none is out of range after the baseline - the negative control.
-  expect_equal(statuses(a), c(F04 = "amber", F06 = "amber", F03 = "amber",
-                              F01 = "amber", F05 = "amber", F02 = "green"))
+  # No fridge is red and none is out of range after the baseline - the negative control.
+  # Under the H-28 badge this noise is left alone: four of the six come back green.
+  expect_equal(statuses(a), c(F04 = "amber", F06 = "amber", F03 = "green",
+                              F01 = "green", F05 = "green", F02 = "green"))
   expect_false(any(statuses(a) == "red"))
   expect_equal(unname(vapply(a, post_out_of_spec, 0L)), rep(0L, 6))
 
   # Cpk is uniformly enormous, which is what pure noise looks like.
   expect_true(all(vapply(a, function(x) x$cpk, 0) > 4))
 
-  expect_equal(summaries$bad$needing_action, 5L)
+  expect_equal(summaries$bad$needing_action, 2L)
   expect_equal(summaries$bad$units_at_risk, 275)
   expect_equal(round(summaries$bad$average_ppk, 4), 5.4245)
   expect_equal(summaries$bad$last_transfer, 48)
@@ -171,8 +176,8 @@ test_that("on the good set the chart catches F02 while the range check cannot", 
   a <- analyses$good
 
   # Sorted by RPN, highest first (the order the Overview lists).
-  expect_equal(statuses(a), c(F04 = "amber", F06 = "red", F02 = "amber",
-                              F01 = "red", F03 = "amber", F05 = "green"))
+  expect_equal(statuses(a), c(F04 = "green", F06 = "red", F02 = "amber",
+                              F01 = "green", F03 = "green", F05 = "green"))
 
   # F02: the level is wrong, the range is not. This is the case a range check misses.
   expect_equal(round(a$F02$cpk, 3), 0.537)
@@ -188,12 +193,14 @@ test_that("on the good set the chart catches F02 while the range check cannot", 
   expect_equal(a$F05$status, "green")
   expect_equal(nrow(a$F05$violations), 0L)
 
-  # F03 and F04 flap between flags with no temperature story; F01 is the tight fridge
-  # whose tight baseline limits catch a single point (test 1, one point past a limit).
+  # F03 and F04 flap between flags with no temperature story, and F01's tight baseline
+  # limits catch a single recent point. One isolated flag no longer reaches the badge
+  # (H-28 needs two in the day), so all three are green - while F01's 12 bags are still
+  # reported at risk, because the bag count only needs one recent flag.
   expect_equal(sort(unique(a$F01$violations$test)), c(1L, 3L, 5L))
   expect_true(any(a$F01$violations$monitored))
 
-  expect_equal(summaries$good$needing_action, 5L)
+  expect_equal(summaries$good$needing_action, 2L)
   expect_equal(summaries$good$units_at_risk, 67)
   expect_equal(round(summaries$good$average_ppk, 4), 5.7267)
   expect_equal(summaries$good$last_transfer, 48)
@@ -213,43 +220,106 @@ test_that("the range check and the chart disagree by design on both sets", {
   }
   needs_action <- function(a) statuses(a) %in% c("red", "amber")
   expect_equal(names(which(out_of_range(analyses$good))), "F06")
-  expect_equal(sum(needs_action(analyses$good)), 5L)
+  # F06 is the only fridge out of range, and the only one the badge calls red; F02 needs
+  # action for a reason no range check can see (a level riding the 1 C limit).
+  expect_equal(names(analyses$good)[needs_action(analyses$good)], c("F06", "F02"))
 })
 
-# ------------------------------------------------------ the known limitation
+# ------------------------------------------------------ the badge threshold itself
 
-test_that("KNOWN LIMITATION: a set with nothing out of range still reports 5 of 6 needing action", {
-  # The bad set has no reading outside 1-6 C (asserted above) yet five of its six fridges
-  # come back amber and 275 bags are reported at risk. That is not a data problem and not
-  # a broken formula: it is the number of chances to flag. About 120 post-baseline
-  # subgroups are read against 8 special-cause tests, so even at a nominal 3-sigma
-  # false-alarm rate a healthy fridge almost always trips something somewhere, and the
-  # badge turns amber on ANY single post-baseline flag.
-  #
-  # Measured, 200 healthy iid-normal fridges (mean 3.5 C, sd 0.15 C, rounded, 672
-  # readings, baseline frozen the same way) through analyze_fridge():
-  #   92.0% get at least one post-baseline flag
-  #   64.5% come back amber, 27.5% red
-  # A 300-fridge run gave 91.7% / 62.3% / 29.3%. Lag-1 autocorrelation of these readings
-  # is under 0.16 (0.02 on F01 of the demo file), so dependence does NOT explain it -
-  # only the multiple-testing arithmetic does. The bounds below are deliberately loose so
-  # the check pins the behaviour, not the exact seed.
-  expect_equal(summaries$bad$needing_action, 5L)
-
-  set.seed(5300)
-  sim <- vapply(seq_len(150), function(i) {
-    a <- analyze_fridge("FX", data.frame(
+test_that("one lone test-1 point is not enough, two in a row are", {
+  # A synthetic fridge built to isolate the badge threshold, because no committed file has
+  # this shape. The hour means are held 1.6 standard errors from the centre: inside 2 SE,
+  # so no test of their own, and outside 1 SE, with every third hour back near the centre
+  # so the run-based tests 2, 3, 4, 6, 7 and 8 stay quiet. The four readings inside an hour
+  # alternate by 0.05 C, which is what sets sigma_short and so the standard error. A later
+  # hour whose four readings sit at 4.5 C is still inside 1-6 C - no reading is out of
+  # range - but its mean is tens of standard errors above the centre, so test 1 fires there.
+  se_offset <- rep(c(1.6, -1.6, 0.3), length.out = 168) * 0.0433
+  with_spike <- function(n_hours) {
+    v <- numeric(672)
+    for (h in seq_len(168)) {
+      v[((h - 1) * 4 + 1):(h * 4)] <- 3.5 + se_offset[h] + c(-0.05, 0.05, -0.05, 0.05)
+    }
+    if (n_hours > 0) v[(672 - 4 * n_hours + 1):672] <- 4.5
+    analyze_fridge("FX", data.frame(
       fridge_id = "FX",
-      timestamp = as.POSIXct("2026-10-01", tz = "UTC") + (0:671) * 900,
-      temp_c = round(stats::rnorm(672, 3.5, 0.15), 2)
+      timestamp = as.POSIXct("2026-10-01", tz = "UTC") + (seq_along(v) - 1) * 900,
+      temp_c = v
     ), 0)
-    c(flag = any(a$violations$monitored), amber = a$status == "amber", red = a$status == "red")
-  }, logical(3))
+  }
+  flagged_subgroups <- function(a) sort(unique(a$violations$subgroup[a$violations$monitored]))
 
-  expect_true(mean(sim["flag", ]) >= 0.75,
-              info = "a healthy fridge should still be flagged most of the time")
-  expect_true(mean(sim["amber", ]) >= 0.40,
-              info = "and still come back amber often")
-  expect_true(mean(sim["red", ]) >= 0.10,
-              info = "and even red sometimes")
+  lone <- with_spike(1)
+  expect_equal(flagged_subgroups(lone), 168L, info = "one hour, one flagged subgroup")
+  expect_equal(sum(lone$violations$test == 1), 1L, info = "one test-1 point")
+  expect_equal(sum(lone$readings$temp_c < 1 | lone$readings$temp_c > 6), 0L,
+               info = "and no reading left 1-6 C")
+  expect_equal(lone$status, "green",
+               info = "so one hour outside the limits must not raise the badge")
+
+  run <- with_spike(2)
+  expect_equal(flagged_subgroups(run), c(167L, 168L), info = "two hours in a row")
+  expect_equal(sum(run$violations$test == 1), 2L, info = "two test-1 points")
+  expect_equal(sum(run$readings$temp_c < 1 | run$readings$temp_c > 6), 0L,
+               info = "still nothing out of range")
+  expect_equal(run$status, "red",
+               info = "and that is the pattern the badge acts on")
+
+  # The helper itself, directly: adjacency only, and a gap breaks the run.
+  expect_true(two_in_a_row(c(10L, 11L)))
+  expect_false(two_in_a_row(c(10L, 12L)))
+  expect_false(two_in_a_row(10L))
+  expect_false(two_in_a_row(integer(0)))
+  expect_true(two_in_a_row(c(20L, 3L, 4L)))
+})
+
+# ------------------------------------------------------ a healthy fleet, and a real fault
+
+test_that("the H-28 badge leaves a healthy fleet alone and still catches a real fault", {
+  # H-25 measured the old badge on 200 simulated healthy fridges: 92.0% came back red or
+  # amber, because any single post-baseline flag turned the badge amber. That is not a
+  # data problem and not a broken formula - it is the number of chances to flag. About 120
+  # post-baseline subgroups are read against 8 special-cause tests, so at a nominal
+  # 3-sigma false-alarm rate a healthy fridge almost always trips something somewhere.
+  # Lag-1 autocorrelation of these readings is under 0.16 (0.02 on F01 of the demo file),
+  # so dependence does NOT explain it; the arithmetic does. H-28 changed the aggregation
+  # and left the eight tests alone: red needs a reading outside 1-6 C or two test-1 points
+  # in a row inside the last day, amber needs two flags in that day.
+  #
+  # Measured the same way (200 healthy iid-normal fridges, mean 3.5 C, sd 0.15 C, rounded,
+  # 672 readings, baseline frozen the same way) through analyze_fridge(), and printed in
+  # data/README.md and demo/alert_rate.R:
+  #   the flag rate is unchanged - the eight tests still fire on noise
+  #   0.0% red, 15.5% amber, 84.5% green (was 27.5% / 64.5% / 8.0%)
+  # A real fault is still caught: the same fridges with a ramp that reaches 6.5 C, or with
+  # a step to 5.0 C, are 100% red under the shipped rule. The bounds below are
+  # deliberately loose so the check pins the behaviour, not the exact seed.
+  sim <- function(values, n) {
+    set.seed(5300)
+    vapply(seq_len(n), function(i) {
+      a <- analyze_fridge("FX", data.frame(
+        fridge_id = "FX",
+        timestamp = as.POSIXct("2026-10-01", tz = "UTC") + (0:671) * 900,
+        temp_c = round(values(), 2)
+      ), 0)
+      c(flag = any(a$violations$monitored), amber = a$status == "amber",
+        red = a$status == "red")
+    }, logical(3))
+  }
+
+  healthy <- sim(function() stats::rnorm(672, 3.5, 0.15), 200)
+  expect_true(mean(healthy["flag", ]) >= 0.75,
+              info = "the eight tests still flag a healthy fridge most of the time")
+  expect_equal(sum(healthy["red", ]), 0L, info = "a healthy fridge never comes back red")
+  expect_true(mean(healthy["amber", ]) <= 0.30,
+              info = "and only a minority of healthy fridges come back amber")
+
+  drift <- sim(function() {
+    base <- stats::rnorm(192, 3.5, 0.15)
+    ramp <- stats::rnorm(480, 3.5 + seq_len(480) / 480 * 3, 0.15)
+    c(base, ramp)
+  }, 60)
+  expect_equal(mean(drift["red", ]), 1,
+               info = "a fridge drifting to 6.5 C is red on every draw")
 })

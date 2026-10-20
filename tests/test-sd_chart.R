@@ -133,16 +133,19 @@ test_that("the s-chart changed no published number for any demo fridge", {
   # Captured from analyze_all() BEFORE the chart existed. If any of these drift,
   # the chart has leaked into the badge, the RPN, the capability or the
   # violations table, which is the one thing it must never do.
+  # The four `status` values for F04, F06, F03 and F01 were re-captured in H-28,
+  # when the badge rule changed by decision (two flags in the last day, not one).
+  # Everything else, and every other number here, is still the pre-s-chart capture.
   expected <- list(
     F02 = list(status = "red", rpn = 900, severity = 9, occurrence = 10, urgency = 10,
                cpk = 6.1514253024, ppk = 5.8635949946, gap = 0.2878303078,
                units_at_risk = 180, blood_units = 180, hours_text = "already out",
                lag1 = 0.1041215533, violations = 573L, charts = "X-bar,Range"),
-    F04 = list(status = "red", rpn = 100, severity = 10, occurrence = 10, urgency = 1,
+    F04 = list(status = "green", rpn = 100, severity = 10, occurrence = 10, urgency = 1,
                cpk = 6.2806962334, ppk = 6.1330157061, gap = 0.1476805272,
                units_at_risk = 0, blood_units = 220, hours_text = "> 72 h",
                lag1 = 0.0515223939, violations = 15L, charts = "X-bar,Range"),
-    F06 = list(status = "red", rpn = 54, severity = 6, occurrence = 9, urgency = 1,
+    F06 = list(status = "amber", rpn = 54, severity = 6, occurrence = 9, urgency = 1,
                cpk = 5.9127169864, ppk = 6.0778081150, gap = -0.1650911286,
                units_at_risk = 55, blood_units = 55, hours_text = "> 72 h",
                lag1 = -0.1244811141, violations = 11L, charts = "Range,X-bar"),
@@ -154,7 +157,7 @@ test_that("the s-chart changed no published number for any demo fridge", {
                cpk = 4.9469091153, ppk = 5.1205119521, gap = -0.1736028369,
                units_at_risk = 8, blood_units = 8, hours_text = "> 72 h",
                lag1 = -0.1479448778, violations = 69L, charts = "X-bar"),
-    F01 = list(status = "amber", rpn = 15, severity = 3, occurrence = 5, urgency = 1,
+    F01 = list(status = "green", rpn = 15, severity = 3, occurrence = 5, urgency = 1,
                cpk = 5.4741169973, ppk = 5.5360808058, gap = -0.0619638085,
                units_at_risk = 0, blood_units = 12, hours_text = "> 72 h",
                lag1 = 0.0229965294, violations = 6L, charts = "Range,X-bar")

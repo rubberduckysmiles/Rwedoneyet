@@ -1,7 +1,7 @@
 # Hi friends!
 
 This is the handoff for Bank of Bloody Mary.
-H-01 through H-07 and H-09 through H-18 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). **H-08 is the only task left**, and it is a person, not a commit: it submits the repo on Devpost. Please do not mark anything done until the checks below are actually run.
+H-01 through H-29 are done and pushed to [github.com/rubberduckysmiles/Rwedoneyet](https://github.com/rubberduckysmiles/Rwedoneyet). **H-08 is the only task left**, and it is a person, not a commit: it submits the repo on Devpost. Please do not mark anything done until the checks below are actually run.
 
 The live app, with no login, is [Bank of Bloody Mary on Posit Connect](https://connect.systems-apps.com/content/7da4a137-8c89-44c1-a191-7c9e9317f590/). A logged-out request returned HTTP 200 and the page title Bank of Bloody Mary. Access on Connect is set so anyone can open it. Leave it that way. Judges have to open it without an account.
 
@@ -24,7 +24,7 @@ Read them in this order. The later files assume the earlier ones.
 |---|---|
 | H-01 | SPEC.md is filled in. No `FILL IN` blanks left. |
 | H-02 | `readings.csv`, `inventory.csv`, `generator_log.csv`, and the codebook. Six fridges, one reading every 15 minutes, 2026-10-01 through 2026-10-07. |
-| H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. The suite now prints `FAIL 0 \| WARN 0 \| SKIP 0 \| PASS 854`. |
+| H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. The suite now prints `FAIL 0 \| WARN 0 \| SKIP 0 \| PASS 1068`. |
 | H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge Detail, Capability, Backup generator, Data. |
 | H-05 | `demo/show_numbers.R` and the demo walk-through. It prints `DEMO OK`. |
 | H-06 | GitHub Actions deploys `app/` to the course Posit Connect server. The publisher key is only in GitHub Actions secrets. |
@@ -37,12 +37,21 @@ Read them in this order. The later files assume the earlier ones.
 | H-15 | The generator statistics strip and plain captions on the Capability tab. |
 | H-16, H-17, H-18 | Hygiene and accuracy: the stray `README copy.md` is gone, the Switchover caption now agrees with the Switchover value, and the two scenario datasets are described from measurement. |
 | H-22 | The two scenario readings sets are back to the team's hand-tuned versions (the names are labels, not descriptions: the bad set has nothing failing, and the good set has no textbook failure), and `data/README.md` describes both from measurement. `make_scenarios.R` now writes its own generated pair into `data/scenario_generated/` and cannot overwrite the committed sets. |
+| H-24 | Dead code out: `ordinal()`, `sparkline_plot()` and `READINGS_COLUMNS` are gone. |
+| H-25 | `tests/test-scenarios.R` pins both scenario sets by md5 and by their measured verdicts, and `data/README.md` states what the first badge rule did to a healthy fleet. |
+| H-26 | `demo/alert_rate.R` measures the badge under five aggregation rules on 200 simulated fridges per population: healthy, drifting and stepped. |
+| H-27 | The product is named Bank of Bloody Mary in every document and every file header. |
+| H-28 | The badge rule changed because of that measurement: two flags inside the last 24 hours, not one. `demo/alert_rate.R` still measures the old rule as `previous`, so the change stays visible. |
+| H-29 | `Demo.md` is UTF-8, and `demo/README.md` points at the alert-rate script. |
+| H-32 | The card sentence reads the same 24 hours the badge judges, so a green card cannot announce an old shift and an amber card says which pattern made it amber. `tests/test-flag_sentence.R` pins the three cards that exposed it. No verdict moved. |
 
 The known-answer check is ten hours of temperatures whose hour means are all exactly 3.5 °C. Sigma short is 0.2569046516. Cpk is 3.2437456007. Ppk is 3.6984390192. The gap is negative on that set because the hour means do not move. Constant data, every reading 3.5 °C, makes Cpk and Ppk missing. They are never infinity. `Rscript app/workflow.R` prints `WORKFLOW OK` when this still matches.
 
-On the demo data the overview is: 6 fridges needing action, 283 blood units at risk, average Ppk 5.719, last backup generator transfer 48 seconds. The fridge table, including why F04 is red with 0 bags at risk, is in [demo/README.md](demo/README.md).
+On the demo data the overview is: 4 fridges needing action, 283 blood units at risk, average Ppk 5.719, last backup generator transfer 48 seconds. The fridge table, including why F02 is red on a live out-of-range reading, why F06 is amber for its daily defrost and why F04 is green after its blackout aged out of the 24-hour window, is in [demo/README.md](demo/README.md).
 
 ## Please review these before changing anything
+
+**The demo data was restored on 2026-10-20.** Commit `654f766` ("fixing data") overwrote `data/readings.csv` with a copy of `data/scenario_one_good/readings.csv` and left `app/data/` alone, which put the suite at `FAIL 62` and made the repo and the shipped app disagree about all six fridges — F02's drift and F04's blackout vanished from the demo. `data/readings.csv` is back to the hand-tuned file, byte-identical to `app/data/readings.csv` as it was before that commit, and the suite is green again. `docs/FINDING-data-readings-overwrite.md` has the evidence. If you meant to change the demo, change `data/` and `app/data/` together.
 
 The statistics are the graded part. Read the function, then the test next to it.
 
@@ -52,10 +61,10 @@ The statistics are the graded part. Read the function, then the test next to it.
 - No costs anywhere. The risk number is severity times occurrence times urgency. Urgency is hours until 1 °C or 6 °C. It replaces the usual detection score, and [docs/plan.md](docs/plan.md) says so.
 - Limits freeze after the first 48 hours. Later data must not move them. The Overview page says this. Lag-1 autocorrelation is printed as a limitation and is not used to widen the limits.
 
-Two demo results look surprising and are not formula bugs. Please decide together whether to leave them.
+Two demo results used to look surprising. H-28 answered them by measuring the aggregation, not by explaining it away: the eight tests are right and the badge rule was wrong.
 
-- F01 was planted as healthy and comes out amber. Test 2 fired: nine hourly means sat on one side of the center. That can happen because readings 15 minutes apart are not independent.
-- F06 is the healthy fridge with a normal defrost, and it comes out red. Test 1 fired on the range chart at the defrost hour. Its 55 bags are in the 283 units at risk.
+- F01 was planted as healthy and came out amber, because test 2 fired on nine hourly means sitting on one side of the center. With about 120 post-baseline hours and eight tests, a healthy fridge nearly always trips something somewhere — and dependence is not the reason: measured lag-1 is 0.02 on F01, under 0.16 everywhere. The badge now asks for two flags inside the last 24 hours, so F01 is green and its 12 bags are not in the at-risk count.
+- F06 is the healthy fridge with a normal defrost. Its defrost lifts one hour a day enough to trip two tests inside the last day, so it is amber — worth watching — and its 55 bags are in the 283 units at risk.
 
 F02 is the one to talk about first. The compressor drifts, it is already above 6 °C, it holds 180 bags, and its risk priority number is 900.
 

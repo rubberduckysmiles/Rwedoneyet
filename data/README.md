@@ -171,8 +171,8 @@ number here, so a change to either file or to the statistics moves this table.
 
 | Set | Red | Amber | Green | Needing action | Bags reported at risk | Average Ppk |
 |---|---|---|---|---|---|---|
-| `scenario_one_bad` | none | F01, F03, F04, F05, F06 | F02 | 5 of 6 | 275 (F04 220, F06 55) | 5.42 |
-| `scenario_one_good` | F01, F06 | F02, F03, F04 | F05 | 5 of 6 | 67 (F06 55, F01 12) | 5.73 |
+| `scenario_one_bad` | none | F04, F06 | F01, F02, F03, F05 | 2 of 6 | 275 (F04 220, F06 55) | 5.42 |
+| `scenario_one_good` | F06 | F02 | F01, F03, F04, F05 | 2 of 6 | 67 (F06 55, F01 12) | 5.73 |
 
 Two rows are the point of the pair, and both come out as intended. On the good set,
 **F02** has no reading outside 1–6 °C and still has a Cpk of 0.537: the level is wrong
@@ -180,20 +180,40 @@ while the range is fine, so the range check misses it and the chart does not. **
 the one fridge the range check does catch — 16 readings above 6 °C, 11 of them after the
 baseline — with a Cpk of 0.598.
 
-The third is a limitation, recorded rather than hidden. The bad set has **nothing outside
-1–6 °C** and the monitor still reports **5 of its 6 fridges as needing action**. No
-dependence in the readings explains that: lag-1 autocorrelation is under 0.16 on every
-fridge (about 0.02 on F01 of the demo file). The cause is the number of chances to flag —
-roughly 120 post-baseline subgroups read against 8 special-cause tests, so at a nominal
-3-sigma false-alarm rate a healthy fridge is almost sure to trip something somewhere, and
-the badge turns amber on *any* single post-baseline flag. Simulating 200 healthy
-iid-normal fridges (mean 3.5 °C, sd 0.15 °C, 672 readings each) through `analyze_fridge()`
-gives **92.0% with at least one post-baseline flag, 64.5% amber and 27.5% red**; a
-300-fridge run gave 91.7% / 62.3% / 29.3%. The eight tests are implemented correctly one
-by one — the aggregation over the whole post-baseline series is what makes "needing
-action" close to this monitor's default state on a healthy fleet. The check in
-`tests/test-scenarios.R` pins that behaviour with deliberately loose bounds, so the
-limitation stays visible in the suite instead of being rediscovered.
+The third is the aggregation, and it is a decision rather than a formula. The bad set has
+**nothing outside 1–6 °C**, and under the first badge rule the monitor still reported **5 of
+its 6 fridges as needing action**. Dependence is not the cause: roughly 120 post-baseline
+subgroups read against 8 special-cause tests means a healthy fridge is almost sure to trip
+something somewhere, and that rule turned the badge amber on *any* single post-baseline flag.
+Lag-1 autocorrelation is under 0.16 on every fridge, about 0.02 on F01 of the demo file.
+Simulating 200 healthy iid-normal fridges (mean 3.5 °C, sd 0.15 °C, 672 readings each)
+through `analyze_fridge()` gave **92.0% red or amber** under that rule (64.5% amber,
+27.5% red).
+
+H-28 changed the aggregation and left the eight tests alone. The badge now uses the same
+24-hour window the bag count uses: red needs a reading outside 1–6 °C or two X-bar test-1
+points in a row inside it, and amber needs two flags inside it (Cpk below 1.0 and a crossing
+within 12 hours still count, so a slow problem stays visible). Re-measured the same way, and
+printed with its alternatives by `demo/alert_rate.R`:
+
+| Badge rule | Healthy fleet red or amber | Real drift red | Flags per healthy fridge |
+|---|---|---|---|
+| the first rule (any single flag) | 92.0% | 100% | 4.13 |
+| the shipped rule (two flags in the last day) | 15.5% | 100% | 4.13 |
+
+A real fault is not lost by asking for two flags: 200 simulated fridges whose ramp reaches
+6.5 °C, and 200 that step to 5.0 °C, are **100% red** under the shipped rule. The flag rate
+is unchanged, because the eight tests are implemented correctly one by one and the fix is in
+the aggregation, not in muting them. `tests/test-scenarios.R` holds both halves of that: a
+healthy fleet must mostly come back green, and a drifting fridge must come back red on every
+draw.
+
+The cost of the window is recorded rather than hidden. A fault that resolved more than a day
+ago drops off the badge. In the demo file F04's blackout ran 2026-10-06 14:00 to 16:00, so
+the shipped rule calls F04 green where the first rule said red. `units_at_risk` uses the same
+24-hour window, so the badge and the bag count agree — F04's 220 bags are not in the 283. A
+two-day window would keep F04 on the list, but would put 38.5% of a healthy fleet at red or
+amber instead of 15.5%.
 
 ### Checksums
 
