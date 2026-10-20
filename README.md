@@ -50,8 +50,8 @@ Five pages: Overview, Fridge Detail, Capability, Backup generator, and Data.
 
 | Page | What it shows |
 |---|---|
-| Overview | Fridges needing action, blood units at risk, average Ppk, and the last backup generator transfer. Fridge cards are sorted by risk priority number, and each card carries a control chart of that fridge's hourly mean temperature, labelled on the y axis as *Hourly mean (°C)*. A note says the limits are frozen from the first 48 hours. |
-| Fridge Detail | An X-bar chart over a range chart over a standard deviation chart. The baseline is shaded on each. A flagged hour is marked, and the hover text is the test's plain-English meaning. Below them, the blood types in that fridge, with the at-risk bags of each type marked. |
+| Overview | Fridges needing action, blood units at risk, average Ppk, and the last backup generator transfer. A **dataset dropdown** sits under the boxes and reloads a dataset the moment you pick it, kept in step with the picker on the Data page. Below it, one **"How to read the fridge cards"** card explains the columns every fridge card shares; the cards themselves follow, sorted by risk priority number, each carrying a control chart of that fridge's hourly mean temperature, labelled on the y axis as *Hourly mean (°C)*, and its own special-cause sentence. A note says the limits are frozen from the first 48 hours. |
+| Fridge Detail | An X-bar chart over a range chart over a standard deviation chart. The baseline is shaded on each. A flagged hour is marked, and the hover text is the test's plain-English meaning. Below them, the blood types in that fridge: the at-risk bags of each type are always red and the within-spec bags always green, whatever the fridge's badge says — the color means the bag, not the fridge. |
 | Capability | Cpk, Ppk and the gap, each with a plain caption under it saying what that number means for this fridge; a histogram with lines at 1 °C, 3.5 °C, and 6 °C; a rolling 24-hour Ppk; one sentence; and the backup generator's own statistics with a panel saying what a generator does through a mains outage. |
 | Backup generator | Individuals and moving-range charts for transfer time, with a line at 10 seconds for the threshold the team chose. |
 | Data | The three demo files, or three files the manager uploads, plus a button that reloads the demo. |
@@ -96,6 +96,16 @@ Only three files. All of the files in `data/` are synthetic. Seed 5300. Regenera
 | `generator_log.csv` | `date`, `transfer_time_sec` | A stopwatch at the generator transfer test. Optional. |
 
 The demo has six fridges, F01 through F06, from 2026-10-01 00:00:00 through 2026-10-07 23:45:00. Timestamps have no time zone. The planted stories, and how to read each number, are in [demo/README.md](demo/README.md).
+
+Three synthetic datasets ship with the app, and you can switch between them without reloading anything else:
+
+| Dataset | What is in it |
+|---|---|
+| General demo (planted failures) | Six fridges with the planted stories above. |
+| Scenario one: good | Six fridges that each behave differently. |
+| Scenario one: bad | All six are ordinary noise; nothing fails. |
+
+Pick one from the **dataset dropdown on the Overview**, which applies immediately, or from the picker on the **Data page** and press *Load dataset*. The two keep in step, so they never claim different data is loaded. If you upload your own files, the Overview dropdown says so rather than pretending the numbers on screen are one of the three.
 
 ## 5. Parameters
 

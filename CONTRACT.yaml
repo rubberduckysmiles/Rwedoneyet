@@ -1122,3 +1122,51 @@ tasks:
       label, and app/manifest.json's app.R checksum is refreshed by hand as md5
       of the LF-normalised bytes with all bundled checksums matching.
     result: "The Overview tab's per-fridge control charts now label the y axis 'Hourly mean (C)', the same wording the Fridge Detail page's X-bar chart already used for the identical series (a$subgroups$mean), so one quantity is no longer shown under two names - or under none. Building the plot for all six demo fridges in both themes returns that exact title with margin.l = 56, up from 40 so the label does not crowd the tick numbers at the card's 90 px height; a rendered check of the built plotly layout printed 'Hourly mean (C)' for F01-F06 at dark FALSE and TRUE. The change is display only: the plotted series, the baseline band, the +/-3 SE annotations, the status colors and every number the card prints are untouched, and no statistic moved. New tests/test-sparkline_label.R pins the label for all six fridges in both themes, asserts it matches the X-bar chart's wording, and asserts the left margin leaves room; a negative control with a deliberately wrong title made it report FAIL 13 | PASS 4, so it genuinely detects a missing or renamed axis, and it passes with FAIL 0 | WARN 0 | SKIP 0 | PASS 17. The full suite prints FAIL 0 | WARN 0 | SKIP 0 | PASS 1090, up from 1069 with no failing or warning assertion added, and DEMO OK and WORKFLOW OK still print. README.md's Overview row now names the control chart and its y-axis label. app/manifest.json's app.R checksum moved from 98453960290d24294eb2d93edfcabb26 to 9fef747fd7ef37b0921a18a0ad616281, refreshed by hand as md5 of the LF-normalised bytes; all 22 bundled checksums match, platform 4.5.2."
+
+  - id: H-35
+    title: "Formatting: blood-type colors, Overview dataset dropdown, one shared description card"
+    points: "tool clarity: the chart cannot say a bag is safe when it is not, the Overview can show another dataset without a trip to the Data page, and the shared column meanings are stated once instead of six times"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-formatting_overview.R", "tests/test-captions.R", "README.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, on the "Formatting" branch. Three
+      UI changes, answered by four clarifying questions before any code:
+      (1) on Fridge Detail, section "Blood types in this fridge", the at-risk
+      bars took the fridge's own badge color, so a green fridge drew its
+      at-risk bags GREEN - the one color that reads as safe, on the bags that
+      are not. At risk is now always red (#D64045) and within spec always
+      green (#2E9E6B), the app's existing badge shades, so the color means the
+      bag and not the fridge. bloodtype_plot() lost its status_color argument
+      entirely, so no caller can re-couple them.
+      (2) The Overview is computed from whatever dataset is loaded, and the
+      only way to change that was the Data page's picker plus its Load button.
+      A dataset dropdown now sits on the Overview under the summary boxes and
+      applies on the pick, kept in step with the Data page picker; both read
+      and write one source of truth, rv$dataset_id, through one shared
+      load_dataset(). An uploaded file is flagged so the picker says the
+      numbers on screen are not one of the three rather than claiming one.
+      (3) The two identical paragraphs under all six F01-F06 cards are gone
+      from the cards; they are stated once in a "How to read the fridge cards"
+      card above them, under the summary boxes. Each card keeps its own
+      flag_sentence, which is genuinely per fridge.
+      Do NOT change any statistic. Nothing here moves a number, a limit, a
+      badge, a bag count or a sentence - it is color, placement and one new
+      control.
+    definition_of_done: >
+      On Fridge Detail the at-risk bars are #D64045 and the within-spec bars
+      #2E9E6B for every fridge, including a green fridge, and bloodtype_plot()
+      no longer accepts a status color. The Overview has a dataset dropdown
+      that swaps the loaded dataset on the FIRST pick (an observer with
+      ignoreInit = TRUE silently swallows exactly that one), the two pickers
+      never disagree, and re-picking the loaded dataset is a no-op. The shared
+      column prose renders in one card and appears on none of the fridge
+      cards. testthat prints 0 failures, SKIP 0 so every new assertion
+      actually runs, and a negative control on the ignoreInit guard makes the
+      new test file fail so it genuinely detects the regression; DEMO OK and
+      WORKFLOW OK still print with every published number unchanged.
+      README.md describes the new UI and app/manifest.json's app.R checksum is
+      refreshed by hand as md5 of the LF-normalised bytes with all bundled
+      checksums matching.
+    result: "Three requested UI changes, and two real defects found and fixed while building them. (1) The blood-type chart's at-risk bars now take the app's red #D64045 and the within-spec bars its green #2E9E6B for all six demo fridges - verified by building the plot for each and reading the trace colors, including green F01 and F04, which previously drew their at-risk bags in the safe green; the cause was the at-risk trace borrowing a$status_color, and bloodtype_plot() lost that argument so it cannot come back. (2) A dataset dropdown on the Overview under the summary boxes now applies on the pick and keeps in step with the Data page picker; both go through one load_dataset() writing rv$dataset_id. Switching the demo through the dropdown moves units at risk 283 (general) to 67 (scenario_one_good) to 275 (scenario_one_bad) and back, and the Data page button path reaches the same 67, so the numbers really follow the dataset. (3) The two paragraphs repeated under all six cards moved into one 'How to read the fridge cards' card above them; each card keeps its own flag_sentence. Two defects the tests caught: ignoreInit = TRUE was swallowing the FIRST dropdown pick (the test file went FAIL 5 | PASS 40 with it, FAIL 0 | PASS 45 without), and DATASET_CHOICES rendered the 'general' option with an NA label because DATASET_LABELS was indexed by the empty folder name instead of the id. Quoted: tests/test-formatting_overview.R FAIL 0 | WARN 0 | SKIP 0 | PASS 56, tests/test-captions.R FAIL 0 | WARN 0 | SKIP 0 | PASS 39, the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1155 (was 1090), app/workflow.R WORKFLOW OK, and demo/show_numbers.R DEMO OK with the same four fridges needing action, 283 bags at risk, average Ppk 5.72 and 48 seconds. The picker's re-render is pinned too, because it renders its own selection on every switch: all three options survive and no stale selection sticks, and an uploaded file raises a flag that makes the dropdown say the numbers on screen are not a dataset, cleared again when a dataset is loaded (both asserted through the real upload path). No statistic, limit, badge, bag count or sentence moved. app/manifest.json's app.R checksum moved from 9fef747fd7ef37b0921a18a0ad616281 to 572212567962cd6f5cccfe059eb6c24c, refreshed by hand as md5 of the LF-normalised bytes in a one-line diff; all 22 bundled checksums match, platform 4.5.2."

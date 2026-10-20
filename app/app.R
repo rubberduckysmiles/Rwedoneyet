@@ -23,6 +23,14 @@ DATASETS <- c(general = "", scenario_one_good = "scenario_one_good",
 DATASET_LABELS <- c(general = "General demo (planted failures)",
                     scenario_one_good = "Scenario one: good",
                     scenario_one_bad = "Scenario one: bad")
+# One source of truth for the picker's choices and its help text, so the Data page and the
+# Overview cannot offer different lists or describe the same dataset in two ways.
+# Indexed by dataset id: DATASET_LABELS[DATASETS] would look up the empty folder name, so
+# the names are taken from the labels' own names instead.
+DATASET_CHOICES <- stats::setNames(names(DATASETS), unname(DATASET_LABELS[names(DATASETS)]))
+DATASET_HELP <- paste("General: six fridges with planted failures.",
+                      "Good: six fridges that each behave differently.",
+                      "Bad: all six are ordinary noise, nothing fails.")
 
 theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
 
@@ -339,9 +347,12 @@ rolling_plot <- function(a, dark) {
 
 # Bags by blood type for one fridge. Display only: the counts come from the inventory
 # sheet and the at-risk split from bloodtype_table(), which divides by the fridge's own
-# total. The badge color marks the at-risk bags, so the chart never invents a new color
-# meaning. Sorted commonest first, which bloodtype_table() already does.
-bloodtype_plot <- function(bt, status_color, dark) {
+# total. The colors are FIXED to the meaning, not to the fridge's badge: at risk is always
+# red and within spec is always green, the same red and green the status badges use
+# ("Act this shift" #D64045, "Leave it" #2E9E6B). Tying at-risk to the status color made
+# a green fridge draw its at-risk bags green, which read as safe when the bags were not.
+# Sorted commonest first, which bloodtype_table() already does.
+bloodtype_plot <- function(bt, dark) {
   if (nrow(bt) == 0) {
     return(empty_plot("No inventory rows for this fridge.<br>Add blood_type to the inventory file.", dark))
   }
@@ -349,11 +360,11 @@ bloodtype_plot <- function(bt, status_color, dark) {
   safe <- bt$blood_units - at_risk
   plot_ly() %>%
     add_bars(x = ~safe, y = ~bt$blood_type, orientation = "h", name = "Within spec",
-             marker = list(color = "#9AA0A6"),
+             marker = list(color = "#2E9E6B"),
              text = ~sprintf("%d bags", round(safe)), textposition = "inside",
              hovertemplate = "%{y}: %{x} bags within spec<extra></extra>") %>%
     add_bars(x = ~at_risk, y = ~bt$blood_type, orientation = "h", name = "At risk",
-             marker = list(color = status_color),
+             marker = list(color = "#D64045"),
              text = ~ifelse(at_risk > 0, sprintf("%d at risk", round(at_risk)), ""),
              textposition = "inside",
              hovertemplate = "%{y}: %{x} bags at risk<extra></extra>") %>%
@@ -430,6 +441,8 @@ ui <- bslib::page_navbar(
     ")),
     uiOutput("status_card"),
     uiOutput("overview_boxes"),
+    uiOutput("overview_dataset_picker"),
+    uiOutput("overview_notes"),
     uiOutput("fridge_cards"),
     tags$p(class = "text-muted small mt-2 mb-0", "Control limits are locked from each fridge's first 48 hours. Priority = how many bags \u00d7 how bad the signal \u00d7 how soon, each scored from 1 to 10.")
   ),
@@ -501,12 +514,9 @@ ui <- bslib::page_navbar(
       fileInput("up_inventory", "Inventory (fridge_id, blood_type, blood_units)", accept = ".csv"),
       fileInput("up_generator", "Backup generator log (date, transfer_time_sec)", accept = ".csv")
     ),
-    selectInput("dataset", "Dataset", choices = c("General demo (planted failures)" = "general",
-                                                "Scenario one: good" = "scenario_one_good",
-                                                "Scenario one: bad" = "scenario_one_bad")),
+    selectInput("dataset", "Dataset", choices = DATASET_CHOICES),
     actionButton("load_demo", "Load dataset", class = "btn-primary mb-3"),
-    tags$p(class = "text-muted small",
-           "General: six fridges with planted failures. Good: six fridges that each behave differently. Bad: all six are ordinary noise, nothing fails."),
+    tags$p(class = "text-muted small", DATASET_HELP),
     uiOutput("data_status"),
     bslib::navset_card_tab(
       title = "Preview",
@@ -528,7 +538,11 @@ server <- function(input, output, session) {
     readings = demo$readings, inventory = demo$inventory, backup_generator = demo$generator,
     from_readings = if (is.null(demo$readings)) "none" else "General demo (planted failures)",
     from_inventory = if (is.null(demo$inventory)) "none" else "General demo (planted failures)",
-    from_backup_generator = if (is.null(demo$generator)) "none" else "General demo (planted failures)"
+    from_backup_generator = if (is.null(demo$generator)) "none" else "General demo (planted failures)",
+    # Which dataset is loaded, and whether an upload replaced it. The Overview picker and
+    # the Data page picker both read and write dataset_id.
+    dataset_id = "general",
+    manual_upload = FALSE
   )
 
   dark <- reactive(identical(input$color_mode, "dark"))
@@ -543,6 +557,9 @@ server <- function(input, output, session) {
       data <- prepare(utils::read.csv(file$datapath, stringsAsFactors = FALSE))
       rv[[slot]] <- data
       rv[[paste0("from_", slot)]] <- file$name
+      # An upload replaces the dataset source, so the pickers no longer describe what is
+      # on screen. Flag it rather than let a picker claim a dataset that is not loaded.
+      rv$manual_upload <- TRUE
     }, error = function(e) {
       showNotification(paste0("Could not load ", label, ": ", conditionMessage(e)), type = "error", duration = 12)
     })
@@ -551,8 +568,9 @@ server <- function(input, output, session) {
   observeEvent(input$up_inventory, try_upload(input$up_inventory, prepare_inventory, "inventory", "inventory"))
   observeEvent(input$up_generator, try_upload(input$up_generator, prepare_generator, "backup_generator", "backup generator log"))
 
-  observeEvent(input$load_demo, {
-    dataset_id <- input$dataset
+  # One loader, shared by the Data page's button and the Overview's dropdown, so the two
+  # cannot load a dataset differently. Returns the dataset id on success, NULL on failure.
+  load_dataset <- function(dataset_id) {
     if (is.null(dataset_id) || !dataset_id %in% names(DATASETS)) dataset_id <- "general"
     folder <- file.path(data_dir, DATASETS[[dataset_id]])
     display_name <- DATASET_LABELS[[dataset_id]]
@@ -560,13 +578,43 @@ server <- function(input, output, session) {
     if (is.null(d$readings)) {
       showNotification(paste0("Demo data not found in ", folder, ". Expected readings.csv, inventory.csv and generator_log.csv."),
                        type = "error")
-      return()
+      return(NULL)
     }
     rv$readings <- d$readings
     rv$inventory <- d$inventory
     rv$backup_generator <- d$generator
     rv$from_readings <- rv$from_inventory <- rv$from_backup_generator <- display_name
-    showNotification(paste0("Loaded ", display_name, "."), type = "message")
+    rv$dataset_id <- dataset_id
+    # An uploaded file is no longer the source, so drop the manual-upload flag.
+    rv$manual_upload <- FALSE
+    dataset_id
+  }
+
+  # Which dataset is on screen. Tracked in rv rather than read from an input, because the
+  # Data page picker and the Overview picker are two controls for one piece of state and
+  # either can change it.
+  overview_dataset_id <- reactive({
+    if (is.null(rv$dataset_id)) "general" else rv$dataset_id
+  })
+
+  observeEvent(input$load_demo, {
+    loaded <- load_dataset(input$dataset)
+    if (is.null(loaded)) return()
+    showNotification(paste0("Loaded ", DATASET_LABELS[[loaded]], "."), type = "message")
+  })
+
+  # The Overview dropdown applies the moment a value is chosen. This must NOT use
+  # ignoreInit: the first pick a manager makes arrives as the observer's first change, and
+  # ignoreInit would swallow exactly that one. A NULL (nothing chosen yet) is skipped
+  # instead, and re-picking the dataset already loaded is a no-op.
+  observeEvent(input$overview_dataset, {
+    if (is.null(input$overview_dataset)) return()
+    if (identical(input$overview_dataset, rv$dataset_id)) return()
+    loaded <- load_dataset(input$overview_dataset)
+    if (is.null(loaded)) return()
+    # Keep the Data page picker showing the same dataset.
+    updateSelectInput(session, "dataset", selected = loaded)
+    showNotification(paste0("Loaded ", DATASET_LABELS[[loaded]], "."), type = "message")
   })
 
   output$data_status <- renderUI({
@@ -649,6 +697,53 @@ server <- function(input, output, session) {
     )
   })
 
+  # Dataset picker on the Overview. The Overview is built from whatever is loaded, and
+  # until now the only way to change that was the Data page's picker plus its Load button.
+  # This dropdown applies immediately, and is kept in sync with the Data page picker, so
+  # the two always show the same dataset.
+  output$overview_dataset_picker <- renderUI({
+    bslib::card(
+      fill = FALSE,
+      bslib::card_header("Dataset"),
+      tags$p(class = "text-muted small mb-2",
+             "Every number and card on this page is computed from the dataset selected here."),
+      selectInput("overview_dataset", NULL, choices = DATASET_CHOICES,
+                  selected = overview_dataset_id()),
+      if (isTRUE(rv$manual_upload)) {
+        tags$p(class = "small mb-2", style = "color:#D64045;",
+               paste("Uploaded files are in use, so the numbers above are not this dataset.",
+                     "Pick a dataset here to replace them."))
+      },
+      tags$p(class = "text-muted small mb-0", DATASET_HELP)
+    )
+  })
+
+  # The single description card. These two paragraphs used to be repeated under all six
+  # fridge cards; they explain the columns every card shares, so they are stated once.
+  output$overview_notes <- renderUI({
+    if (length(analyses()) == 0) return(NULL)
+    bslib::card(
+      fill = FALSE,
+      bslib::card_header("How to read the fridge cards"),
+      tags$p(class = "text-muted small mb-2",
+             paste("Blood units are the bags stored. Ppk is the room between this",
+                   "fridge's readings and the nearer of 1 °C or 6 °C, counted in",
+                   "sigmas. Out of spec in is the forecast time until the fitted line",
+                   "reaches 1 °C or 6 °C. Mean and Std dev are the fridge's baseline",
+                   "average temperature and its typical hour-to-hour spread, from the",
+                   "first 48 hours.")),
+      tags$p(class = "text-muted small mb-2",
+             paste("Risk priority number is severity × occurrence × urgency, each scored 1 to 10.",
+                   "Severity is the bag count banded 1 to 10, occurrence is the worst",
+                   "special-cause pattern that fired, and urgency is how soon the forecast",
+                   "reaches 1 °C or 6 °C. Higher acts first.")),
+      tags$p(class = "text-muted small mb-0",
+             paste("The sentence under each card is that fridge's own newest special-cause",
+                   "meaning, from the last 24 hours; \"No special-cause flag.\" means its last",
+                   "day was clean."))
+    )
+  })
+
   output$fridge_cards <- renderUI({
     list_a <- analyses()
     if (length(list_a) == 0) return(NULL)
@@ -678,18 +773,9 @@ server <- function(input, output, session) {
           tags$div(class = "col-4", tags$div(class = "text-muted", "Std dev (\u00B0C)"),
                    tags$strong(fmt_num(if (isTRUE(a$has_limits)) a$baseline$sigma_short else NA_real_, 2)))
         ),
-        tags$p(class = "text-muted small mb-1",
-               paste("Blood units are the bags stored. Ppk is the room between this",
-                     "fridge's readings and the nearer of 1 °C or 6 °C, counted in",
-                     "sigmas. Out of spec in is the forecast time until the fitted line",
-                     "reaches 1 °C or 6 °C. Mean and Std dev are the fridge's baseline",
-                     "average temperature and its typical hour-to-hour spread, from the",
-                     "first 48 hours.")),
         tags$p(class = "small mb-1",
                sprintf(paste("Risk priority number: severity %d × occurrence %d × urgency %d = %d.",
-                             "Severity is the bag count banded 1 to 10, occurrence is the worst",
-                             "special-cause pattern that fired, and urgency is how soon the forecast",
-                             "reaches 1 °C or 6 °C. Higher acts first."),
+                             "Higher acts first."),
                        a$severity, a$occurrence, a$urgency, a$rpn)),
         tags$p(class = "mb-0 small", a$flag_sentence)
       )
@@ -774,7 +860,7 @@ server <- function(input, output, session) {
 
   output$bloodtype_chart <- renderPlotly({
     a <- detail()
-    bloodtype_plot(bloodtype_data(), a$status_color, dark())
+    bloodtype_plot(bloodtype_data(), dark())
   })
 
   output$xbar_chart <- renderPlotly({
