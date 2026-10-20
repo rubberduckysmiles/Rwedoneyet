@@ -165,7 +165,7 @@ tasks:
       git clone of the public repo into an empty folder, then the app/
       testme script and the H-03 tests both pass with no extra steps; git
       grep -i "api_key" finds no real key; the Devpost entry links the repo.
-    result: ""
+    result: "Sparkline y-axis title removed (margin 68 -> 40); Mean and Std dev added as col-4 stat columns plus an explanatory sentence. Tests PASS 974, WORKFLOW OK, DEMO OK, testme started and listened on 127.0.0.1:5763."
 
   - id: H-09
     title: Blood type per bag in the inventory, and a blood-type section on Fridge Detail
@@ -939,3 +939,23 @@ tasks:
       contained those bytes; demo/README.md describes demo/alert_rate.R and what
       it prints; testthat still prints 0 failures.
     result: "Demo.md is UTF-8 now: the 12 Windows-1252 bytes it held on 5 lines (en dashes, an em dash, degree signs, a multiplication sign and a plus-or-minus) became the characters they always meant, so a reader on GitHub sees 1-6 C, severity x occurrence x urgency and center +/- 3 SE instead of replacement characters. Quoted: reading the file as UTF-8 succeeds with 0 replacement characters, git diff changes only lines 5, 7, 29, 35 and 37 - exactly the lines that held the 12 bytes - and the file grew from 2395 to 2411 bytes with no word changed. demo/README.md gained a block pointing at demo/alert_rate.R and saying what it prints. testthat printed FAIL 0 | WARN 0 | SKIP 0 | PASS 974."
+
+  - id: H-30
+    title: "Move mean and std dev from the sparkline y-axis into the card caption"
+    points: "tool depth: Overview card captions carry the baseline mean and standard deviation instead of the chart axis"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-19"
+    owns: ["app/app.R", "app/manifest.json"]
+    notes: >
+      Restored sparklines already present from the prior fix. Removed the mean/sd
+      title from the sparkline y-axis, tightened the left margin, and added Mean
+      and Std dev columns to each fridge card's stat row. Blood type and every
+      other published number are unchanged.
+    definition_of_done: >
+      Rscript -e "testthat::test_dir('tests')" passes with 0 failures and the
+      same suite size as before; Rscript app/workflow.R prints WORKFLOW OK;
+      Rscript demo/show_numbers.R prints DEMO OK; the Overview page shows all six
+      sparklines with an untitled y-axis and six stat columns per card, and the
+      Mean and Std dev values agree with demo/show_numbers.R.
+    result: ""

@@ -105,7 +105,6 @@ sparkline_plot <- function(a, dark = FALSE) {
   fg <- if (isTRUE(dark)) "#E6E6E6" else "#212529"
   shapes <- list()
   annotations <- list()
-  y_title <- "Hourly mean (\u00B0C)"
   y_range <- NULL
   if (isTRUE(a$has_limits)) {
     lim <- a$baseline$limits$xbar
@@ -122,9 +121,6 @@ sparkline_plot <- function(a, dark = FALSE) {
            text = text, showarrow = FALSE, font = list(size = 10, color = fg))
     }
     annotations <- list(label(lim$ucl, "+3 SE", "bottom"), label(lim$lcl, "-3 SE", "top"))
-    if (!is.null(a$baseline$center) && !is.null(a$baseline$sigma_short)) {
-      y_title <- sprintf("Mean %.2f \u00B0C, sd %.2f \u00B0C", a$baseline$center, a$baseline$sigma_short)
-    }
     span <- lim$ucl - lim$lcl
     pad <- if (isTRUE(span > 0)) span * 0.28 else 0.1
     y_range <- c(min(c(d$mean, lim$lcl), na.rm = TRUE) - pad,
@@ -134,11 +130,10 @@ sparkline_plot <- function(a, dark = FALSE) {
           line = list(color = a$status_color, width = 2),
           text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text") %>%
     layout(shapes = shapes, annotations = annotations,
-           margin = list(l = 68, r = 8, t = 8, b = 36),
+           margin = list(l = 40, r = 8, t = 8, b = 36),
            xaxis = list(title = "", nticks = 3, tickformat = "%b %d",
                         tickfont = list(size = 10, color = fg)),
-           yaxis = list(title = list(text = y_title, font = list(size = 11, color = fg)),
-                        tickfont = list(size = 10, color = fg), range = y_range),
+           yaxis = list(title = "", tickfont = list(size = 10, color = fg), range = y_range),
            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
     config(displayModeBar = FALSE)
 }
@@ -647,11 +642,6 @@ server <- function(input, output, session) {
     names(rank_of) <- ids
     list_a <- list_a[order(ids)]
     cards <- lapply(list_a, function(a) {
-      mean_note <- if (isTRUE(a$has_limits) && !is.null(a$baseline$center)) {
-        sprintf("Mean %.2f \u00B0C", a$baseline$center)
-      } else {
-        "No baseline mean yet"
-      }
       bslib::card(
         fill = FALSE,
         bslib::card_header(
@@ -661,16 +651,22 @@ server <- function(input, output, session) {
         plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "90px"),
         tags$div(
           class = "row text-center small g-1 mb-2",
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
-          tags$div(class = "col-3", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn))
+          tags$div(class = "col-4", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
+          tags$div(class = "col-4", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
+          tags$div(class = "col-4", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
+          tags$div(class = "col-4", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn)),
+          tags$div(class = "col-4", tags$div(class = "text-muted", "Mean (\u00B0C)"),
+                   tags$strong(fmt_num(if (isTRUE(a$has_limits)) a$baseline$center else NA_real_, 2))),
+          tags$div(class = "col-4", tags$div(class = "text-muted", "Std dev (\u00B0C)"),
+                   tags$strong(fmt_num(if (isTRUE(a$has_limits)) a$baseline$sigma_short else NA_real_, 2)))
         ),
         tags$p(class = "text-muted small mb-1",
                paste("Blood units are the bags stored. Ppk is the room between this",
                      "fridge's readings and the nearer of 1 °C or 6 °C, counted in",
                      "sigmas. Out of spec in is the forecast time until the fitted line",
-                     "reaches 1 °C or 6 °C.")),
+                     "reaches 1 °C or 6 °C. Mean and Std dev are the fridge's baseline",
+                     "average temperature and its typical hour-to-hour spread, from the",
+                     "first 48 hours.")),
         tags$p(class = "small mb-1",
                sprintf(paste("Risk priority number: severity %d × occurrence %d × urgency %d = %d.",
                              "Severity is the bag count banded 1 to 10, occurrence is the worst",
