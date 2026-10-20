@@ -137,10 +137,11 @@ sparkline_plot <- function(a, dark = FALSE) {
           line = list(color = a$status_color, width = 2),
           text = ~sprintf("%s<br>%.2f C", time_text(time), mean), hoverinfo = "text") %>%
     layout(shapes = shapes, annotations = annotations,
-           margin = list(l = 40, r = 8, t = 8, b = 36),
+           margin = list(l = 56, r = 8, t = 8, b = 36),
            xaxis = list(title = "", nticks = 3, tickformat = "%b %d",
                         tickfont = list(size = 10, color = fg)),
-           yaxis = list(title = "", tickfont = list(size = 10, color = fg), range = y_range),
+           yaxis = list(title = "Hourly mean (\u00B0C)", tickfont = list(size = 10, color = fg),
+                        range = y_range),
            paper_bgcolor = "rgba(0,0,0,0)", plot_bgcolor = "rgba(0,0,0,0)", showlegend = FALSE) %>%
     config(displayModeBar = FALSE)
 }

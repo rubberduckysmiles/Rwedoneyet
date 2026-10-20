@@ -1085,3 +1085,40 @@ tasks:
       as md5 of the LF-normalised bytes with all bundled checksums matching.
     result: "The fourth value box is gone from the Capability tab's Backup generator card, so that card now shows three boxes - Last transfer, Typical transfer, Tests beyond the limits - at col_widths md = 4, and the in_control verdict is shown once, on the Backup generator page where it was already. A rendered-UI check of output$capability_top prints Switchover FALSE, 'in control' FALSE, 'investigate' FALSE, and TRUE for 'Last transfer', 'Typical transfer', 'Tests beyond the limits' and the demo's 48.0. The switchover local was dead once the box went and was deleted with it; git grep finds no switchover or in_control left in app/app.R. No statistic moved: generator_stats() still returns last, typical, ucl, beyond, in_control, n and message unchanged, and in_control keeps its own tests, including the NA case when imr_limits refuses to draw limits - the demo log still gives last 48.0 s, typical 7.5 s, 1 of 30 tests beyond the limits and in_control FALSE. tests/test-capability_generator.R now asserts the removal (no Switchover, no 'every test inside the limits', no 'investigate' on the card) instead of asserting the removed wording, and still asserts in_control is computed; that file prints FAIL 0 | WARN 0 | SKIP 0 | PASS 55 and the full suite prints FAIL 0 | WARN 0 | SKIP 0 | PASS 1069, with DEMO OK and WORKFLOW OK still printing. README.md's Capability-tab table drops the switchover row from the card while keeping the in_control explanation and naming the Backup generator tab as where the verdict lives, its generator-stats section says the Capability tab repeats the transfer numbers and the Backup generator tab carries the verdict, and its demo-numbers paragraph no longer claims a switchover verdict on that card; Demo.md's Capability line drops switchover. app/manifest.json's app.R checksum moved from ad326dc3c4368650c3d3bc6ed8f7b9c1 to 98453960290d24294eb2d93edfcabb26, refreshed by hand as md5 of the LF-normalised bytes; all 22 bundled checksums match, platform 4.5.2."
 
+
+  - id: H-34
+    title: "Label the y axis on the Overview control charts"
+    points: "tool clarity: a manager reading a sparkline can say what it plots"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-sparkline_label.R", "README.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The Overview tab draws one control
+      chart per fridge - the sparkline on each card, from sparkline_plot() in
+      app.R - and it shipped with an empty y-axis title. A manager saw tick
+      numbers with no units and nothing saying the points were hourly means
+      rather than individual readings, while the Fridge Detail page's X-bar
+      chart, which plots the identical series (a$subgroups$mean), already
+      labelled it.
+      What to do: give the sparkline's y axis the same title the X-bar chart
+      uses, "Hourly mean (C)", so the same number is not given two names, and
+      widen the left margin enough that the title does not crowd the ticks at
+      the card's 90 px chart height. This is a display change only: the
+      plotted series, the limits, the +/-3 SE annotations, the colors and
+      every number the card prints are unchanged.
+      Do NOT touch sparkline_plot()'s data, the baseline band, the status
+      colors, or any statistic. Nothing here is a new number; it is a name
+      for a number that was already on screen.
+    definition_of_done: >
+      Every fridge card's control chart on the Overview carries a y-axis title
+      of "Hourly mean (C)": building the plot for all six demo fridges, in both
+      the light and dark themes, returns that exact title, and the title matches
+      the Fridge Detail X-bar chart's wording for the same series. The left
+      margin is widened to make room at the 90 px card height. testthat prints
+      0 failures and adds the new tests without weakening any existing one,
+      DEMO OK and WORKFLOW OK still print, and no plotted value, limit or card
+      number changes. README.md's Overview row names the chart and its axis
+      label, and app/manifest.json's app.R checksum is refreshed by hand as md5
+      of the LF-normalised bytes with all bundled checksums matching.
+    result: "The Overview tab's per-fridge control charts now label the y axis 'Hourly mean (C)', the same wording the Fridge Detail page's X-bar chart already used for the identical series (a$subgroups$mean), so one quantity is no longer shown under two names - or under none. Building the plot for all six demo fridges in both themes returns that exact title with margin.l = 56, up from 40 so the label does not crowd the tick numbers at the card's 90 px height; a rendered check of the built plotly layout printed 'Hourly mean (C)' for F01-F06 at dark FALSE and TRUE. The change is display only: the plotted series, the baseline band, the +/-3 SE annotations, the status colors and every number the card prints are untouched, and no statistic moved. New tests/test-sparkline_label.R pins the label for all six fridges in both themes, asserts it matches the X-bar chart's wording, and asserts the left margin leaves room; a negative control with a deliberately wrong title made it report FAIL 13 | PASS 4, so it genuinely detects a missing or renamed axis, and it passes with FAIL 0 | WARN 0 | SKIP 0 | PASS 17. The full suite prints FAIL 0 | WARN 0 | SKIP 0 | PASS 1090, up from 1069 with no failing or warning assertion added, and DEMO OK and WORKFLOW OK still print. README.md's Overview row now names the control chart and its y-axis label. app/manifest.json's app.R checksum moved from 98453960290d24294eb2d93edfcabb26 to 9fef747fd7ef37b0921a18a0ad616281, refreshed by hand as md5 of the LF-normalised bytes; all 22 bundled checksums match, platform 4.5.2."
