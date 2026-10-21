@@ -65,8 +65,10 @@ test_that("the Docs page names the team and starts every dropdown closed", {
   expect_match(ui_html, "Expand all", fixed = TRUE)
   expect_match(ui_html, "Keep It Cool", fixed = TRUE)
   expect_false(grepl("<details open", ui_html, fixed = TRUE))
-  expect_match(ui_html, "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/README.md",
+  expect_match(ui_html, "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/CODEBOOK.md",
                fixed = TRUE)
+  expect_false(grepl("lag-1 = cor", ui_html, fixed = TRUE))
+  expect_false(grepl("line = lm(hourly mean", ui_html, fixed = TRUE))
   expect_match(ui_html, "1\u20136", fixed = TRUE)
   expect_match(ui_html, "3.2437456007", fixed = TRUE,
                info = "the known-answer Cpk is quoted, not recomputed on the page")

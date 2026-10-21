@@ -823,7 +823,7 @@ docs_page <- function() {
                target = "_blank", rel = "noopener", "GitHub repository"),
         tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/README.md",
                target = "_blank", rel = "noopener", "README"),
-        tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/README.md",
+        tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/CODEBOOK.md",
                target = "_blank", rel = "noopener", "Data codebook")
       )
     ),
@@ -933,12 +933,6 @@ docs_page <- function() {
           "96 readings is 24 hours at one reading every 15 minutes. A window with sd 0 gives a missing index."
         ),
         docs_equation(
-          "Lag-1 autocorrelation",
-          "lag-1 = cor(x[1:(N - 1)], x[2:N])",
-          "Printed on the capability page. It is not used to widen the limits.",
-          wide = TRUE
-        ),
-        docs_equation(
           "Individuals and moving range",
           paste0(
             "MR = abs(x[i] - x[i - 1])\n",
@@ -953,21 +947,9 @@ docs_page <- function() {
           wide = TRUE
         ),
         docs_equation(
-          "Hours to a spec limit",
-          paste0(
-            "line = lm(hourly mean ~ hour), after the baseline\n",
-            "last = the line at the latest hour\n",
-            "hours = 0 if last is outside 1 to 6\n",
-            "hours = (6 - last) / slope if the slope is positive\n",
-            "hours = (1 - last) / slope if the slope is negative"
-          ),
-          "A flat line, or a line heading back inside the spec, is no crossing. Fewer than 3 hourly means leaves the hours missing. The fridge card does not print this number. It still sets urgency.",
-          wide = TRUE
-        ),
-        docs_equation(
           "Risk priority number",
           "RPN = severity * occurrence * urgency\neach score is a whole number from 1 to 10",
-          "Severity counts bags. Occurrence is the worst signal on the whole chart after the baseline. Urgency comes from the hours above.",
+          "Severity counts bags. Occurrence is the worst signal on the whole chart after the baseline. Urgency is the table below.",
           wide = TRUE
         )
       ),

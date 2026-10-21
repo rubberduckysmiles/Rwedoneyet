@@ -13,8 +13,6 @@
 | Min subgroups | 25 | `min_subgroups = 25` | Must have >= 25 before limits drawn. |
 | Trailing window (rolling Ppk) | 96 readings | `rolling_ppk(..., window = 96)`; README §5, forecast.R | 24 hours at 15 minutes. |
 | Capability cutoff | 1.0 | README §5, §6 | Cpk >= 1.0 for "capable". |
-| Forecast horizon rule | after hour 48; "already out" or `Inf` when none | `hours_to_spec` | Conservative prediction. |
-|---|---|---|---|
 | Generator threshold | 10 seconds | README §5, §7, app UI (Overview, and Fridge and Generator Detail) | **Team-chosen assumption. Not a spec limit and not a control limit.** Set for each site's own test. |
 | Seeds | 5300 (data), 5301 (blood types) | `data/make_data.R` | Synthetic data reproducibility. |
 | Blood type frequencies (generator input) | O+ 38%, A+ 32%, B+ 9%, O- 7%, A- 6%, AB+ 3%, B- 2%, AB- 1% (sum 98%, renormalized) | `data/make_data.R` (rmultinom); `data/README.md` | Chosen distribution for synthetic draw, not computed from inventory. |
@@ -31,9 +29,8 @@
 | X-bar limits (center, SE, lcl,ucl, zones) | `xbar_limits` | X-bar chart, zones |
 | Range/sd limits | `range_chart_limits`, `sd_chart_limits` | Charts |
 | Capability (Cpk, Ppk, gap) | `capability_indices` | Capability tab; Cpk uses sigma_short, Ppk uses sigma_overall, gap = Cpk-Ppk |
-| Baseline freeze (limits + cap) | `freeze_baseline` | First 48h, min 25; lag1 stored |
+| Baseline freeze (limits + cap) | `freeze_baseline` | First 48h, min 25 |
 | Special cause tests 1–8 | `special_cause_test_*` | Violations table + meanings |
-| Hours to spec | `hours_to_spec` | Not shown. Still sets urgency, and a crossing within 12 h can turn the badge amber |
 | Rolling Ppk | `rolling_ppk` | Capability chart (96 readings) |
 | Severity, occurrence, urgency | `severity_score`, `worst_occurrence`, `urgency_score` | Fridge card RPN |
 | RPN | `rpn` | Fridge card (severity*occurrence*urgency) |
@@ -62,7 +59,6 @@
 ## Key notes
 
 - Variances divide by n-1. Control limits are center ± 3 SE; zones at 1,2 SE (explained as aid, not control limits).
-- Lag-1 printed as a limitation, not used to widen limits.
 - Limits frozen after first 48 hours; < 25 subgroups → no limits.
 - Cpk uses sigma_short; Ppk uses sigma_overall; gap = Cpk-Ppk. If sigma==0, indices/gap are NA with message.
 - RPN = severity × occurrence × urgency (urgency stands in for detection). Verified on every demo fridge.

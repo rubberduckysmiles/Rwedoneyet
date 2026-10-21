@@ -1622,3 +1622,31 @@ tasks:
       demo/show_numbers.R DEMO OK. app/manifest.json's app.R checksum moved
       from 4cfddb06f67c94385b4ca87c73614597 to d33bea9ece0c86466a8e0449b943cf5b.
       No statistic moved.
+
+  - id: H-46
+    title: "Docs methods drop two cards, and the codebook link points at CODEBOOK.md"
+    points: "tool clarity: the methods section shows the equations a manager uses, and the codebook link opens the codebook"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21 19:54"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-detail_and_docs.R", "CODEBOOK.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-21. Statistical Methods drops the
+      lag-1 card and the hours-to-a-spec-limit card. The Data codebook link
+      opens CODEBOOK.md. CODEBOOK.md drops those two entries. The functions
+      stay in app/R. No statistic changes.
+    definition_of_done: >
+      The Docs page has no lag-1 equation and no hours-to-a-spec equation,
+      and its codebook link is the CODEBOOK.md URL. CODEBOOK.md has no
+      lag-1 note and no hours-to-spec row. testthat prints 0 failures.
+      DEMO OK and WORKFLOW OK still print. app/manifest.json's app.R
+      checksum matches the LF-normalised file.
+    result: >
+      Statistical Methods no longer has a lag-1 card or an hours-to-a-spec
+      card. The Data codebook link opens CODEBOOK.md. CODEBOOK.md no longer
+      lists the forecast-horizon rule, the hours-to-spec row, or the lag-1
+      note. Quoted: the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1410
+      (was 1408), app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
+      app/manifest.json's app.R checksum moved from
+      d33bea9ece0c86466a8e0449b943cf5b to 58eedd177891aa217ae786623573e300.
+      No statistic moved.
