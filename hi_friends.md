@@ -25,7 +25,7 @@ Read them in this order. The later files assume the earlier ones.
 | H-01 | SPEC.md is filled in. No `FILL IN` blanks left. |
 | H-02 | `readings.csv`, `inventory.csv`, `generator_log.csv`, and the codebook. Six fridges, one reading every 15 minutes, 2026-10-01 through 2026-10-07. |
 | H-03 | The statistics, in plain R under `app/R/`. `app/qc.R` only sources those files. The suite now prints `FAIL 0 \| WARN 0 \| SKIP 0 \| PASS 1068`. |
-| H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge Detail, Capability, Backup generator, Data. |
+| H-04 | The Shiny app in `app/app.R`. Pages: Overview, Fridge and Generator Detail, Capability, Data, Docs. |
 | H-05 | `demo/show_numbers.R` and the demo walk-through. It prints `DEMO OK`. |
 | H-06 | GitHub Actions deploys `app/` to the course Posit Connect server. The publisher key is only in GitHub Actions secrets. |
 | H-07 | The root README and `app/README.md`. |

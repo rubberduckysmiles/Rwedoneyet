@@ -1,6 +1,6 @@
 # The Overview tab's per-fridge control charts must say what the y axis is.
 #
-# Each fridge card on the Overview carries a 90 px sparkline: the hourly mean
+# Each fridge card on the Overview carries a 180 px chart: the hourly mean
 # temperature, the same series the Fridge Detail page's X-bar chart draws. It
 # shipped with an empty y-axis title, so a manager saw tick numbers with no
 # units and nothing saying the points were hourly means rather than raw
@@ -73,11 +73,12 @@ test_that("the label matches the X-bar chart's wording for the same series", {
   expect_equal(yaxis_title(env$sparkline_plot(a, dark = FALSE)), xbar_title)
 })
 
-test_that("the left margin leaves room for the title at the sparkline's 90 px height", {
+test_that("the left margin leaves room for the title beside the tick numbers", {
   skip_if(length(all_analyses) == 0, "no demo readings")
 
-  # The card sets height = "90px". A title needs more room than the 40 px the
-  # chart used before the label existed, or it crowds the tick numbers.
+  # The card sets height = "180px" and gives the chart the left portion of the
+  # card. A title still needs more room than the 40 px the chart used before
+  # the label existed, or it crowds the tick numbers.
   a <- all_analyses[[names(all_analyses)[1]]]
   b <- plotly::plotly_build(env$sparkline_plot(a, dark = FALSE))
   expect_gte(as.numeric(b$x$layout$margin$l), 56)

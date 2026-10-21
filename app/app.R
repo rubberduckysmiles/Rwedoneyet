@@ -31,12 +31,27 @@ DATASET_CHOICES <- stats::setNames(names(DATASETS), unname(DATASET_LABELS[names(
 DATASET_HELP <- paste("General: six fridges with planted failures.",
                       "Good: six fridges that each behave differently.",
                       "Bad: all six are ordinary noise, nothing fails.")
+# The Overview card has room for one line. The names "good" and "bad" do not
+# describe the files, so this line says what they actually are. The Data page
+# keeps the longer DATASET_HELP.
+DATASET_HELP_SHORT <- "Bad is ordinary noise. Good is the mixed set."
 
 theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
 
 # One color per test number for flagged points. Red, amber and green are kept for status only.
 TEST_COLORS <- c("#7B2D8E", "#0072B2", "#56B4E9", "#CC79A7", "#8C564B", "#17BECF", "#555555", "#B8860B")
 CAPABLE_SENTENCES <- c("capable and stable", "inside the spec width, but not stable", "not capable")
+
+# The left edge of the Capability card. This is the baseline sentence, which can
+# disagree with the Overview badge: the badge looks at the last day only.
+capable_edge <- function(sentence) {
+  colors <- c(
+    "capable and stable" = "#2E9E6B",
+    "inside the spec width, but not stable" = "#E8A33D",
+    "not capable" = "#D64045"
+  )
+  if (!is.null(sentence) && sentence %in% names(colors)) unname(colors[[sentence]]) else "#8A8F98"
+}
 
 # ---- Small display helpers -----------------------------------------------------------------------
 
@@ -197,6 +212,16 @@ shift_status <- function(list_a) {
   }
   sprintf("Go to %s first. %s bags, %s.",
           fridge_label(top$fridge_id), format(top$blood_units, big.mark = ","), situation)
+}
+
+# One number on the right-hand side of a fridge card. The label and the value
+# share a row so five of them stack beside the chart without a second grid.
+card_stat <- function(label, value) {
+  tags$div(
+    class = "d-flex justify-content-between align-items-baseline gap-2",
+    tags$span(class = "text-muted", label),
+    tags$strong(class = "text-nowrap", value)
+  )
 }
 
 stat_box <- function(label, value, note, quiet = FALSE, value_class = NULL) {
@@ -373,7 +398,11 @@ sd_plot <- function(a, keep, dark) {
 
 histogram_plot <- function(a, dark) {
   if (!a$has_limits) return(empty_plot(a$baseline$message, dark))
-  shapes <- list(vline(SPEC_LOW, "#444444"), vline(TARGET_TEMP, "#6C757D"), vline(SPEC_HIGH, "#444444"))
+  # A wash between the spec limits, so the window reads as a place. The three
+  # lines stay where they were. This does not change a count or an index.
+  band <- list(type = "rect", xref = "x", x0 = SPEC_LOW, x1 = SPEC_HIGH, yref = "paper", y0 = 0, y1 = 1,
+               fillcolor = "rgba(46,158,107,0.14)", line = list(width = 0), layer = "below")
+  shapes <- list(band, vline(SPEC_LOW, "#444444"), vline(TARGET_TEMP, "#6C757D"), vline(SPEC_HIGH, "#444444"))
   notes <- list(
     list(x = SPEC_LOW, text = "1 \u00B0C (lower spec)"),
     list(x = TARGET_TEMP, text = "3.5 \u00B0C (target)"),
@@ -392,11 +421,28 @@ histogram_plot <- function(a, dark) {
 
 rolling_plot <- function(a, dark) {
   if (length(a$rolling_ppk) == 0) return(empty_plot("need at least 24 hours of readings", dark))
+  # The line at 1.0 is the same cutoff the Cpk box uses. The axis starts at 0
+  # when the series is positive, so the line stays on the chart.
+  y <- a$rolling_ppk
+  finite <- y[is.finite(y)]
+  if (length(finite) == 0) {
+    y_range <- c(0, 2)
+  } else {
+    lo <- min(0, finite)
+    hi <- max(1, finite)
+    pad <- max((hi - lo) * 0.06, 0.15)
+    y_range <- c(lo, hi + pad)
+  }
   plot_ly(x = a$rolling_time, y = a$rolling_ppk, type = "scatter", mode = "lines",
           line = list(color = "#444444", width = 2),
           text = sprintf("%s<br>Ppk %s", time_text(a$rolling_time), formatC(a$rolling_ppk, format = "f", digits = 2)),
           hoverinfo = "text") %>%
-    layout(yaxis = list(title = axis_title("Rolling 24-hour Ppk", dark)), xaxis = list(title = ""), showlegend = FALSE) %>%
+    layout(shapes = list(hline(1, "#2E9E6B", "dash", 1.5)),
+           annotations = list(list(x = 1, xref = "paper", y = 1, yref = "y", text = "1.0",
+                                   showarrow = FALSE, xanchor = "right", yanchor = "bottom",
+                                   font = ann_font(dark))),
+           yaxis = list(title = axis_title("Rolling 24-hour Ppk", dark), range = y_range),
+           xaxis = list(title = ""), showlegend = FALSE) %>%
     themed(dark)
 }
 
@@ -479,6 +525,645 @@ generator_plots <- function(g, dark) {
   list(individuals = ind, moving_range = mr)
 }
 
+# ---- Capability page pieces ----------------------------------------------------------------------
+# Display only. Every number is already on the analysis or on generator_stats().
+
+capability_sentence <- function(a) {
+  if (a$capable_sentence %in% CAPABLE_SENTENCES) {
+    paste0(fridge_label(a$fridge_id), " is ", a$capable_sentence, ".")
+  } else {
+    paste0(fridge_label(a$fridge_id), ": ", a$capable_sentence)
+  }
+}
+
+capability_verdict_card <- function(a) {
+  htmltools::tagAppendAttributes(
+    bslib::card(
+      fill = FALSE,
+      class = "bbm-cap",
+      bslib::card_header(tags$h4(class = "mb-0", capability_sentence(a))),
+      bslib::layout_columns(
+        fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
+        bslib::value_box("Cpk (short-term sigma)", box_value(fmt_num(a$cpk, 2), cap_ok(a$cpk)),
+          tags$small("Hour to hour room inside 1\u20136 \u00B0C. Above 1.0 is room to spare.")),
+        bslib::value_box("Ppk (overall sigma)", box_value(fmt_num(a$ppk, 2), cap_ok(a$ppk)),
+          tags$small("The same room across the whole baseline, drift included.")),
+        bslib::value_box("Gap (Cpk minus Ppk)", box_value(fmt_num(a$gap, 2), gap_ok(a$gap)),
+          tags$small("Near zero is steady. A stability signal, not a score."))
+      )
+    ),
+    style = sprintf("--bbm-edge:%s;", capable_edge(a$capable_sentence))
+  )
+}
+
+capability_notes_card <- function(a) {
+  lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
+    sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
+  bslib::card(
+    fill = FALSE,
+    class = "mb-3",
+    tags$details(
+      class = "small text-muted",
+      tags$summary("How to read these numbers"),
+      tags$p(class = "mt-2 mb-2",
+             paste("Cpk is the room left if this fridge keeps holding temperature the way it",
+                   "has been holding it hour to hour. Above 1.0 is room to spare; below 1.0",
+                   "it cannot reliably stay in spec.")),
+      tags$p(class = "mb-2",
+             paste("Ppk is the same room measured across the whole baseline, drift and",
+                   "hour-to-hour shifts included. This is the long-run number.")),
+      tags$p(class = "mb-2",
+             paste("The gap is a stability signal, not a score. Near zero means the fridge is",
+                   "steady. Clearly positive means it holds temperature within an hour but",
+                   "wanders between hours, which is a stability problem rather than a",
+                   "capability problem.")),
+      tags$p(class = "mb-2", lag_text),
+      tags$p(class = "mb-0",
+             paste("This bar's color is the baseline verdict. The Overview badge looks only",
+                   "at the last day, so a fridge can need action today and still read capable here."))
+    )
+  )
+}
+
+capability_generator_card <- function(gs) {
+  if (is.null(gs)) {
+    return(bslib::card(
+      fill = FALSE,
+      class = "mb-3",
+      tags$h5(class = "mb-1", "Backup generator"),
+      tags$p(class = "text-muted small mb-0",
+             "No backup generator log loaded. Add one on the Data page to see the backup power statistics here.")
+    ))
+  }
+  bslib::card(
+    fill = FALSE,
+    class = "mb-3",
+    tags$h5(class = "mb-1", "Backup generator"),
+    tags$p(class = "text-muted small",
+           paste("Seconds from a mains outage until backup power carries the load.",
+                 "The 10 s line is a threshold the team chose, not a control limit.")),
+    bslib::layout_columns(
+      fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
+      bslib::value_box("Last transfer", box_value(fmt_num(gs$last, 1), generator_ok(gs$last)),
+                       tags$small("seconds, from the most recent test")),
+      bslib::value_box("Typical transfer", box_value(fmt_num(gs$typical, 1), generator_ok(gs$typical)),
+                       tags$small("seconds, the center of the chart")),
+      bslib::value_box("Tests beyond the limits", box_value(sprintf("%d", gs$beyond), zero_ok(gs$beyond)),
+                       tags$small(sprintf("of %d tests run", gs$n)))
+    )
+  )
+}
+
+# The site's generator is one log, not a fridge. This value is the extra choice
+# on Fridge and Generator Detail.
+GENERATOR_CHOICE <- "generator"
+
+docs_section <- function(title, subtitle, ...) {
+  tags$details(
+    class = "bbm-docsec",
+    tags$summary(
+      tags$span(
+        class = "bbm-docsec-copy",
+        tags$span(class = "bbm-docsec-title", title),
+        tags$span(class = "bbm-docsec-sub", subtitle)
+      )
+    ),
+    tags$div(class = "bbm-docsec-body", ...)
+  )
+}
+
+# One equation, written the way the function in app/R/ computes it.
+docs_equation <- function(title, formula, note, wide = FALSE) {
+  tags$div(
+    class = if (wide) "bbm-eq bbm-wide" else "bbm-eq",
+    tags$span(title),
+    tags$pre(class = "bbm-formula", formula),
+    tags$p(note)
+  )
+}
+
+docs_file <- function(name, rows, note, href) {
+  tags$div(
+    class = "bbm-file",
+    tags$span(name),
+    tags$strong(rows),
+    tags$p(note),
+    tags$a(href = href, target = "_blank", rel = "noopener", "Open the file")
+  )
+}
+
+docs_table <- function(headers, rows, numeric = FALSE) {
+  tags$table(
+    class = if (numeric) "bbm-table bbm-table-nums" else "bbm-table",
+    tags$thead(tags$tr(lapply(headers, tags$th))),
+    tags$tbody(lapply(rows, function(row) tags$tr(lapply(row, tags$td))))
+  )
+}
+
+docs_page <- function() {
+  tags$div(
+    id = "bbm-docs",
+    tags$style(HTML("
+      #bbm-docs { width: min(1240px, 100%); margin-left: auto; margin-right: auto; }
+      .bbm-docs-hero {
+        background: var(--bs-body-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 14px;
+        padding: 22px 24px 18px;
+        box-shadow: rgba(20, 22, 28, 0.05) 0 1px 2px, rgba(20, 22, 28, 0.05) 0 6px 18px;
+        margin-bottom: 16px;
+      }
+      .bbm-docs-kicker {
+        font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+        color: var(--bs-secondary-color); margin: 0 0 8px;
+      }
+      .bbm-docs-hero h2 {
+        font-size: 1.9rem; font-weight: 650; letter-spacing: -0.03em;
+        margin: 0 0 10px; line-height: 1.15;
+      }
+      .bbm-docs-lead { font-size: 1.05rem; margin: 0 0 16px; }
+      .bbm-docs-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+      .bbm-docs-fact {
+        background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+        border-radius: 10px; padding: 10px 12px;
+      }
+      .bbm-docs-fact span {
+        display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--bs-secondary-color); margin-bottom: 3px;
+      }
+      .bbm-docs-fact strong { font-weight: 600; font-size: 0.95rem; }
+      .bbm-docs-links { display: flex; flex-wrap: wrap; gap: 8px; }
+      .bbm-docs-links a {
+        display: inline-block; border: 1px solid var(--bs-border-color); border-radius: 999px;
+        padding: 5px 12px; font-size: 0.85rem; font-weight: 600; color: #B3202A;
+        text-decoration: none; background: var(--bs-body-bg);
+      }
+      [data-bs-theme='dark'] .bbm-docs-links a { color: #ff8a8d; }
+      .bbm-docs-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin: 2px 2px 12px; color: var(--bs-secondary-color); font-size: 0.92rem;
+      }
+      .bbm-docs-expand {
+        border: 1px solid var(--bs-border-color); background: var(--bs-body-bg);
+        color: var(--bs-body-color); border-radius: 8px; padding: 4px 12px; font-size: 0.85rem;
+      }
+      .bbm-docsec {
+        background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+        border-radius: 14px;
+        box-shadow: rgba(20, 22, 28, 0.05) 0 1px 2px, rgba(20, 22, 28, 0.05) 0 6px 18px;
+        margin-bottom: 12px;
+      }
+      .bbm-docsec summary {
+        list-style: none; cursor: pointer; display: flex; align-items: center;
+        gap: 16px; padding: 16px 18px 16px 22px;
+      }
+      .bbm-docsec summary::-webkit-details-marker { display: none; }
+      .bbm-docsec-copy { flex: 1 1 auto; }
+      .bbm-docsec-title { display: block; font-weight: 700; font-size: 1.05rem; }
+      .bbm-docsec-sub { display: block; color: var(--bs-secondary-color); font-size: 0.92rem; margin-top: 2px; }
+      .bbm-docsec summary::after {
+        content: '+'; width: 28px; height: 28px; border: 1px solid var(--bs-border-color);
+        border-radius: 999px; display: grid; place-items: center;
+        color: var(--bs-secondary-color); flex: none; font-size: 1.1rem; line-height: 1;
+      }
+      .bbm-docsec[open] summary::after { content: '\\2212'; }
+      .bbm-docsec-body { padding: 0 22px 16px 22px; }
+      .bbm-docsec-body h3 { font-size: 1.02rem; margin: 18px 0 8px; }
+      .bbm-docsec-body h3:first-child { margin-top: 4px; }
+      .bbm-team {
+        background: var(--bs-body-bg); border: 1px solid var(--bs-border-color);
+        border-radius: 14px; padding: 16px 22px 18px;
+        box-shadow: rgba(20, 22, 28, 0.05) 0 1px 2px, rgba(20, 22, 28, 0.05) 0 6px 18px;
+        margin-bottom: 16px;
+      }
+      .bbm-names { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+      .bbm-names span {
+        background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+        border-radius: 10px; padding: 14px 12px; font-weight: 600; text-align: center;
+      }
+      .bbm-steps { list-style: none; padding: 0; margin: 0; }
+      .bbm-steps li {
+        display: grid; grid-template-columns: 36px 1fr; gap: 14px; align-items: start;
+        padding: 14px 0; border-top: 1px solid var(--bs-border-color);
+      }
+      .bbm-steps li:first-child { border-top: 0; padding-top: 0; }
+      .bbm-steps li::before {
+        content: counter(bbm-step); counter-increment: bbm-step;
+        width: 36px; height: 36px; border-radius: 999px; background: #B3202A; color: #fff;
+        display: grid; place-items: center; font-weight: 700;
+      }
+      .bbm-steps { counter-reset: bbm-step; }
+      .bbm-steps strong { display: block; margin-bottom: 2px; }
+      .bbm-eqs, .bbm-files, .bbm-checks { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .bbm-files { grid-template-columns: repeat(3, 1fr); }
+      .bbm-checks-4 { grid-template-columns: repeat(4, 1fr); }
+      .bbm-eq, .bbm-file, .bbm-check {
+        background: var(--bs-tertiary-bg); border: 1px solid var(--bs-border-color);
+        border-radius: 12px; padding: 14px 16px;
+      }
+      .bbm-eq span, .bbm-file span, .bbm-check span {
+        display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;
+        color: var(--bs-secondary-color); margin-bottom: 6px;
+      }
+      .bbm-formula {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.86rem; line-height: 1.45; white-space: pre-wrap;
+        background: var(--bs-body-bg); border-radius: 8px; padding: 10px 12px; margin: 0 0 8px;
+      }
+      .bbm-eq p, .bbm-file p, .bbm-check p { margin: 0; font-size: 0.92rem; }
+      .bbm-file strong { display: block; font-size: 1.35rem; font-weight: 650; letter-spacing: -0.02em; margin-bottom: 4px; }
+      .bbm-file a { color: #B3202A; font-weight: 600; font-size: 0.88rem; }
+      [data-bs-theme='dark'] .bbm-file a { color: #ff8a8d; }
+      .bbm-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 0 0 8px; }
+      .bbm-table th, .bbm-table td {
+        text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--bs-border-color);
+        vertical-align: top;
+      }
+      .bbm-table th {
+        font-size: 0.72rem; letter-spacing: 0.06em; text-transform: uppercase;
+        color: var(--bs-secondary-color); font-weight: 600;
+      }
+      .bbm-table-nums td:last-child, .bbm-table-nums th:last-child {
+        text-align: right; white-space: nowrap; width: 1%; font-variant-numeric: tabular-nums;
+      }
+      .bbm-wide { grid-column: 1 / -1; }
+      @media (max-width: 800px) {
+        .bbm-docs-facts, .bbm-names, .bbm-eqs, .bbm-files, .bbm-checks, .bbm-checks-4 { grid-template-columns: 1fr; }
+      }
+    ")),
+    tags$script(HTML("
+      function bbmDocsToggle(btn) {
+        var root = document.getElementById('bbm-docs');
+        var items = root.querySelectorAll('details');
+        var openThem = Array.prototype.some.call(items, function (d) { return !d.open; });
+        Array.prototype.forEach.call(items, function (d) { d.open = openThem; });
+        btn.textContent = openThem ? 'Collapse all' : 'Expand all';
+      }
+    ")),
+    tags$div(
+      class = "bbm-docs-hero",
+      tags$p(class = "bbm-docs-kicker",
+             "Project documentation \u00b7 SYSEN 5300 Six Sigma Hackathon \u00b7 Keep It Cool"),
+      tags$h2("Bank of Bloody Mary"),
+      tags$p(class = "bbm-docs-lead",
+             paste("Tells a blood-bank operations manager which refrigerator to service,",
+                   "evacuate, or leave before the next shift, so stored red cells stay within",
+                   "1\u20136 \u00B0C. The screen only displays numbers computed in the statistics code.",
+                   "Red means act this shift, amber means watch, and green means leave it.")),
+      tags$div(
+        class = "bbm-docs-facts",
+        tags$div(class = "bbm-docs-fact", tags$span("User"), tags$strong("Blood-bank operations manager")),
+        tags$div(class = "bbm-docs-fact", tags$span("Inputs"),
+                 tags$strong("Fridge temperature recordings the lab already logs")),
+        tags$div(class = "bbm-docs-fact", tags$span("Data"), tags$strong("Synthetic. Six fridges, one week"))
+      ),
+      tags$div(
+        class = "bbm-docs-links",
+        tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet",
+               target = "_blank", rel = "noopener", "GitHub repository"),
+        tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/README.md",
+               target = "_blank", rel = "noopener", "README"),
+        tags$a(href = "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/README.md",
+               target = "_blank", rel = "noopener", "Data codebook")
+      )
+    ),
+    tags$div(
+      class = "bbm-team",
+      tags$span(class = "bbm-docsec-title", "The Team"),
+      tags$span(class = "bbm-docsec-sub", "Keep It Cool"),
+      tags$div(
+        class = "bbm-names",
+        tags$span("Hannah Brine"),
+        tags$span("Sue Cho"),
+        tags$span("Tanya Schilling")
+      )
+    ),
+    tags$div(
+      class = "bbm-docs-bar",
+      tags$span("Click a section to expand it."),
+      tags$button(type = "button", class = "bbm-docs-expand",
+                  onclick = "bbmDocsToggle(this)", "Expand all")
+    ),
+    docs_section(
+      "How to use",
+      "Load a dataset, read each fridge, then act on the risk priority number",
+      tags$ol(
+        class = "bbm-steps",
+        tags$li(
+          tags$div(
+            tags$strong("Data."),
+            "From the Overview, load an example dataset. General is the planted week. Bad is ordinary noise. Good is the mixed set. The Data page has the same picker, and it can take three files the lab uploads."
+          )
+        ),
+        tags$li(
+          tags$div(
+            tags$strong("Fridge monitoring."),
+            paste("Check each fridge's calculated statistics: the badge, the bags, Ppk, and the",
+                  "hourly mean chart. Open Fridge and Generator Detail for the X-bar chart, the",
+                  "range chart, the standard deviation chart, the blood types, and the flagged hours.",
+                  "Zone lines mark 1 and 2 standard errors. They are not control limits. The last",
+                  "choice in that dropdown is the backup generator, one log for the whole plant.",
+                  "Open Capability for that fridge's sentence, Cpk, Ppk, and the gap.")
+          )
+        ),
+        tags$li(
+          tags$div(
+            tags$strong("Take action."),
+            paste("Use the risk priority number to decide which fridge to repair, evacuate, or leave.",
+                  "The cards are already in that order. Red means act this shift. Amber means watch.",
+                  "Green means leave it.")
+          )
+        )
+      )
+    ),
+    docs_section(
+      "Statistical Methods",
+      "The equations the statistics code already uses",
+      tags$p(paste("Each hour is a subgroup of 4 temperatures. Limits are frozen from the first",
+                   "48 hours. Eight special-cause tests run on the X-bar chart. Test 1 also runs",
+                   "on the range chart, and test 1 also runs on the standard deviation chart.")),
+      tags$div(
+        class = "bbm-eqs",
+        docs_equation(
+          "Sigma short",
+          "sigma short = sqrt(mean of the within-hour sample variances)\neach variance divides by n - 1, and n = 4",
+          "First 48 hours only. A missing variance makes sigma short missing."
+        ),
+        docs_equation(
+          "Sigma overall",
+          "sigma overall = sd(every baseline reading)\nthe divisor is N - 1",
+          "This is the spread of the readings themselves, not the spread inside each hour."
+        ),
+        docs_equation(
+          "X-bar limits",
+          "center = grand mean of the baseline\nSE = sigma short / sqrt(4)\nLCL = center - 3 * SE\nUCL = center + 3 * SE",
+          "SE is the standard error of an hourly mean."
+        ),
+        docs_equation(
+          "Range chart",
+          "center = d2 * sigma short\nUCL = (d2 + 3 * d3) * sigma short\nLCL = max(0, (d2 - 3 * d3) * sigma short)",
+          "d2 is the mean range of n standard normals and d3 is its standard deviation. Both are integrals of the ptukey tail, not a printed table. A range cannot be negative, so the lower limit stays at 0."
+        ),
+        docs_equation(
+          "Standard deviation chart",
+          paste0(
+            "c4 = sqrt(2 / (n - 1)) * Gamma(n/2) / Gamma((n - 1) / 2)\n",
+            "B5 = max(0, c4 - 3 * sqrt(1 - c4^2))\n",
+            "B6 = c4 + 3 * sqrt(1 - c4^2)\n",
+            "center = c4 * sigma short\n",
+            "LCL = B5 * sigma short\n",
+            "UCL = B6 * sigma short"
+          ),
+          "Display only. A flag here is drawn and then stops. It does not enter the badge, the risk priority number, the bags at risk, or the violations table.",
+          wide = TRUE
+        ),
+        docs_equation(
+          "Cpk, Ppk, and the gap",
+          paste0(
+            "distance = min(6 - mean, mean - 1)\n",
+            "Cpk = distance / (3 * sigma short)\n",
+            "Ppk = distance / (3 * sigma overall)\n",
+            "gap = Cpk - Ppk"
+          ),
+          "Above 1.0, the index has room inside 1 to 6 \u00B0C. If a sigma is 0, that index is missing. It is never infinity."
+        ),
+        docs_equation(
+          "Rolling Ppk",
+          "rolling Ppk = Ppk of the latest 96 readings\nboth sigmas in that window are that window's own sd",
+          "96 readings is 24 hours at one reading every 15 minutes. A window with sd 0 gives a missing index."
+        ),
+        docs_equation(
+          "Lag-1 autocorrelation",
+          "lag-1 = cor(x[1:(N - 1)], x[2:N])",
+          "Printed on the capability page. It is not used to widen the limits.",
+          wide = TRUE
+        ),
+        docs_equation(
+          "Individuals and moving range",
+          paste0(
+            "MR = abs(x[i] - x[i - 1])\n",
+            "sigma = mean(MR) / d2\n",
+            "individuals center = mean(x)\n",
+            "individuals limits = center +/- 3 * sigma\n",
+            "MR center = mean(MR)\n",
+            "MR UCL = ((d2 + 3 * d3) / d2) * mean(MR)\n",
+            "MR LCL = max(0, ((d2 - 3 * d3) / d2) * mean(MR))"
+          ),
+          "d2 and d3 are for n = 2, because each day has one transfer time. The solid line at 10 seconds is a threshold the team chose. It is not this chart's control limit.",
+          wide = TRUE
+        ),
+        docs_equation(
+          "Hours to a spec limit",
+          paste0(
+            "line = lm(hourly mean ~ hour), after the baseline\n",
+            "last = the line at the latest hour\n",
+            "hours = 0 if last is outside 1 to 6\n",
+            "hours = (6 - last) / slope if the slope is positive\n",
+            "hours = (1 - last) / slope if the slope is negative"
+          ),
+          "A flat line, or a line heading back inside the spec, is no crossing. Fewer than 3 hourly means leaves the hours missing. The fridge card does not print this number. It still sets urgency.",
+          wide = TRUE
+        ),
+        docs_equation(
+          "Risk priority number",
+          "RPN = severity * occurrence * urgency\neach score is a whole number from 1 to 10",
+          "Severity counts bags. Occurrence is the worst signal on the whole chart after the baseline. Urgency comes from the hours above.",
+          wide = TRUE
+        )
+      ),
+      tags$h3("Severity, from the bag count"),
+      docs_table(
+        c("Bags in the fridge", "Score"),
+        list(
+          c("0", "1"), c("1 to 5", "2"), c("6 to 15", "3"), c("16 to 30", "4"),
+          c("31 to 50", "5"), c("51 to 75", "6"), c("76 to 100", "7"),
+          c("101 to 150", "8"), c("151 to 200", "9"), c("201 or more", "10")
+        ),
+        numeric = TRUE
+      ),
+      tags$h3("Occurrence, the worst signal after the baseline"),
+      docs_table(
+        c("Signal", "Score"),
+        list(
+          c("Nothing flagged, and inside 1 to 6 \u00B0C", "1"),
+          c("X-bar test 6", "2"),
+          c("X-bar test 5 or test 8", "3"),
+          c("X-bar test 4", "4"),
+          c("X-bar test 2", "5"),
+          c("X-bar test 7", "6"),
+          c("X-bar test 3", "7"),
+          c("Range chart test 1", "8"),
+          c("X-bar test 1, still inside 1 to 6 \u00B0C", "9"),
+          c("Any reading outside 1 to 6 \u00B0C", "10")
+        ),
+        numeric = TRUE
+      ),
+      tags$h3("Urgency, from the hours until the line crosses"),
+      docs_table(
+        c("Hours", "Score"),
+        list(
+          c("0 to 2", "10"), c("more than 2 to 4", "9"), c("more than 4 to 8", "8"),
+          c("more than 8 to 12", "7"), c("more than 12 to 18", "6"),
+          c("more than 18 to 24", "5"), c("more than 24 to 36", "4"),
+          c("more than 36 to 48", "3"),           c("more than 48 to 72", "2"),
+          c("more than 72, or no crossing", "1")
+        ),
+        numeric = TRUE
+      )
+    ),
+    docs_section(
+      "Data",
+      "Three synthetic files, with a link and a row count for each",
+      tags$p(paste("Every file is synthetic. Nothing here was measured on a real fridge, a real bag,",
+                   "or a real generator. The safe storage range is 1 to 6 \u00B0C. The baseline is the",
+                   "first 48 hours, 2026-10-01 00:00:00 through 2026-10-02 23:45:00, and the control",
+                   "limits are frozen from it. Column meanings and the planted stories are in the",
+                   "data codebook linked above.")),
+      tags$div(
+        class = "bbm-files",
+        docs_file(
+          "readings.csv",
+          "4,032 rows",
+          "Six fridges, one temperature every 15 minutes, 2026-10-01 through 2026-10-07. Columns: fridge_id, timestamp, temp_c, door_open, on_generator.",
+          "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/readings.csv"
+        ),
+        docs_file(
+          "inventory.csv",
+          "40 rows",
+          "Bags on the shelf, one row per fridge per blood type. Blood type is display only. It does not enter a limit, an index, or the risk priority number.",
+          "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/inventory.csv"
+        ),
+        docs_file(
+          "generator_log.csv",
+          "30 rows",
+          "One backup-generator transfer test per day, 2026-09-07 through 2026-10-06. A stopwatch from the cut in mains power until the generator carries the load.",
+          "https://github.com/rubberduckysmiles/Rwedoneyet/blob/main/data/generator_log.csv"
+        )
+      ),
+      tags$p(class = "mb-0",
+             paste("Each scenario folder has its own readings.csv of 4,032 rows and a copy of the",
+                   "other two files. A lab would record the same three things: a logger every 15",
+                   "minutes, a bag count at shift change, and a stopwatch at the generator test."))
+    ),
+    docs_section(
+      "Tests and Verification",
+      "A known answer, a constant fridge, the demo file, and the commands that re-run them",
+      tags$h3("Known answer"),
+      tags$p(paste("Ten hours of four readings, and every hour mean is exactly 3.5 \u00B0C.",
+                   "The rows live in the tests, not in a fourth CSV. Sum of squares is 1.98.",
+                   "Mean variance is 0.066.")),
+      docs_table(
+        c("Quantity", "Value"),
+        list(
+          c("Sigma short", "0.2569046516"),
+          c("Sigma overall", "0.2253202849"),
+          c("X-bar lower limit", "3.1146430226"),
+          c("X-bar upper limit", "3.8853569774"),
+          c("Cpk", "3.2437456007"),
+          c("Ppk", "3.6984390192"),
+          c("Gap", "-0.4546934185"),
+          c("Lag-1", "-0.2174115934")
+        ),
+        numeric = TRUE
+      ),
+      tags$h3("Two checks beside that answer"),
+      tags$div(
+        class = "bbm-checks",
+        tags$div(
+          class = "bbm-check",
+          tags$span("Constant data"),
+          tags$p("Every reading is 3.5 \u00B0C. Both sigmas are 0. Cpk and Ppk are missing. They are never infinity.")
+        ),
+        tags$div(
+          class = "bbm-check",
+          tags$span("A planted drift"),
+          tags$p("Add 0, 0, 0, 0, 0, 0.2, 0.4, 0.6, 0.8, 1.0 \u00B0C to those ten hours. Sigma short stays 0.2569046516. Cpk becomes 2.8544961286, Ppk becomes 1.7091158726, and the gap becomes +1.1453802560.")
+        )
+      ),
+      tags$h3("Demo file"),
+      tags$div(
+        class = "bbm-checks bbm-checks-4",
+        tags$div(class = "bbm-check", tags$span("Fridges needing action"), tags$p("4")),
+        tags$div(class = "bbm-check", tags$span("Blood units at risk"), tags$p("283")),
+        tags$div(class = "bbm-check", tags$span("Average Ppk"), tags$p("5.719")),
+        tags$div(class = "bbm-check", tags$span("Last transfer"), tags$p("48 seconds"))
+      ),
+      tags$h3("The two scenario sets"),
+      docs_table(
+        c("Set", "Needing action", "Bags at risk", "Average Ppk"),
+        list(
+          c("scenario_one_bad", "2 of 6", "275", "5.42"),
+          c("scenario_one_good", "2 of 6", "67", "5.73")
+        )
+      ),
+      tags$p(paste("On the good set, F02 has no reading outside 1 to 6 \u00B0C and a Cpk of 0.537.",
+                   "F06 is the fridge the range check catches: 16 readings above 6 \u00B0C and a Cpk of 0.598.")),
+      tags$h3("What the badge rule was checked against"),
+      tags$ul(
+        tags$li("If one flag anywhere were enough, 92.0% of a simulated healthy fleet would be red or amber."),
+        tags$li("With two flags inside the last day, that share is 15.5%."),
+        tags$li("A fridge that really drifts out of range is still red on 100% of those draws.")
+      ),
+      tags$h3("Run it again"),
+      tags$ul(
+        class = "mb-0",
+        tags$li("Rscript app/workflow.R prints WORKFLOW OK when the known answer still matches."),
+        tags$li("Rscript demo/show_numbers.R prints DEMO OK, including the four demo numbers above."),
+        tags$li("Rscript -e 'testthat::test_dir(\"tests\")' runs the full suite.")
+      )
+    ),
+    docs_section(
+      "Assumptions and Limitations",
+      "What the numbers assume, and what they leave out",
+      docs_table(
+        c("Topic", "What the tool assumes", "What that leaves out"),
+        list(
+          list(
+            "Normal, independent hours",
+            "Sample variances divide by n \u2212 1. The limits are 3 sigma on either side of the center.",
+            "Lag-1 autocorrelation is printed. It is not used to widen the limits."
+          ),
+          list(
+            "Frozen baseline",
+            "Limits come from the first 48 hours and then stay put. Fewer than 25 subgroups means no limits.",
+            "A later shift in the process does not move the lines."
+          ),
+          list(
+            "Standard deviation chart",
+            "It is drawn from c4, B5, and B6.",
+            "Its flags do not enter the badge, the risk priority number, the bag count, or the violations table."
+          ),
+          list(
+            "Two clocks",
+            "The badge and the bags at risk use the last 24 hours.",
+            "The capability sentence and the occurrence score use the whole chart after the baseline, so a failure that is already over can still outrank a live one."
+          ),
+          list(
+            "Straight-line forecast",
+            "Hours to a spec limit is one line through the later hourly means. A crossing within 12 hours can turn the badge amber.",
+            "It does not predict a door spike or a generator failure, and the fridge card does not print it."
+          ),
+          list(
+            "10 second line",
+            "A threshold the team chose for this site's generator test.",
+            "It is not a control limit and not a spec limit."
+          ),
+          list(
+            "Blood type",
+            "Shown so a manager can see which bags are in the fridge.",
+            "It does not enter a limit, an index, or the risk priority number."
+          ),
+          list(
+            "Synthetic files",
+            "Invented to show one behaviour per fridge.",
+            "They are not a real blood bank's stock."
+          )
+        )
+      )
+    )
+  )
+}
+
 # ---- UI ------------------------------------------------------------------------------------------
 
 ui <- bslib::page_navbar(
@@ -486,6 +1171,9 @@ ui <- bslib::page_navbar(
   id = "main_nav",
   theme = theme,
   fillable = FALSE,
+  # The name sits on a dark red bar. theme = "dark" makes the title and the tabs
+  # light enough to read on #B3202A, in either color mode.
+  navbar_options = bslib::navbar_options(bg = "#B3202A", theme = "dark"),
 
   bslib::nav_panel(
     "Overview",
@@ -496,74 +1184,122 @@ ui <- bslib::page_navbar(
       .bbm-over { color: #D64045; }
       .bbm-ok { color: #2E9E6B; }
       .bbm-figure { font-size: 1rem; font-weight: 500; font-variant-numeric: tabular-nums; }
-      .bbm-fridge .card { border-left: 3px solid var(--bbm-edge); }
+      .bbm-fridge.card { border-left: 7px solid var(--bbm-edge); }
       .bbm-status { background: var(--bs-body-bg); border: 3px solid var(--bs-border-color); }
     ")),
-    uiOutput("status_card"),
+    bslib::layout_columns(
+      fill = FALSE,
+      class = "mb-3",
+      col_widths = bslib::breakpoints(sm = c(12, 12), lg = c(8, 4)),
+      uiOutput("status_card"),
+      uiOutput("overview_dataset_picker")
+    ),
     uiOutput("overview_boxes"),
-    uiOutput("overview_dataset_picker"),
     uiOutput("overview_notes"),
     uiOutput("fridge_cards"),
-    tags$p(class = "text-muted small mt-2 mb-0", "Control limits are locked from each fridge's first 48 hours. Priority = how many bags \u00d7 how bad the signal \u00d7 how soon, each scored from 1 to 10.")
+    tags$p(class = "text-muted small mt-2 mb-0", "Control limits are locked from each fridge's first 48 hours.")
   ),
 
   bslib::nav_panel(
-    "Fridge Detail",
-    uiOutput("detail_alert"),
+    "Fridge and Generator Detail",
     bslib::layout_sidebar(
       sidebar = bslib::sidebar(
-        selectInput("fridge", "Fridge", choices = character(0)),
-        dateRangeInput("dates", "Date range"),
-        checkboxInput("zone_lines", "Show zone lines (1 and 2 standard errors)", value = TRUE),
-        tags$p(class = "text-muted small mb-0",
-               paste("Zone lines mark 1 and 2 standard errors out from the center line:",
-                     "shading for where the points usually fall. They are not control limits."))
+        selectInput("fridge", "Show", choices = character(0)),
+        tags$p(class = "text-muted small",
+               paste("Pick a fridge, or the site's backup generator. The generator is one",
+                     "log for the whole plant, not a seventh fridge.")),
+        shiny::conditionalPanel(
+          condition = "input.fridge != 'generator'",
+          dateRangeInput("dates", "Date range"),
+          checkboxInput("zone_lines", "Show zone lines (1 and 2 standard errors)", value = TRUE),
+          tags$p(class = "text-muted small mb-0",
+                 paste("Zone lines mark 1 and 2 standard errors out from the center line:",
+                       "shading for where the points usually fall. They are not control limits."))
+        )
       ),
-      bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
-      bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
-      bslib::card(plotlyOutput("sd_chart", height = "280px"), full_screen = TRUE),
-      bslib::card(
-        bslib::card_header("Blood types in this fridge"),
-        uiOutput("bloodtype_note"),
-        plotlyOutput("bloodtype_chart", height = "260px"),
-        full_screen = TRUE
+      shiny::conditionalPanel(
+        condition = "input.fridge != 'generator'",
+        uiOutput("detail_alert"),
+        bslib::card(plotlyOutput("xbar_chart", height = "380px"), full_screen = TRUE),
+        bslib::card(plotlyOutput("range_chart", height = "280px"), full_screen = TRUE),
+        bslib::card(plotlyOutput("sd_chart", height = "280px"), full_screen = TRUE),
+        bslib::card(
+          bslib::card_header("Blood types in this fridge"),
+          uiOutput("bloodtype_note"),
+          plotlyOutput("bloodtype_chart", height = "260px"),
+          full_screen = TRUE
+        ),
+        bslib::card(bslib::card_header("Violations"), DT::DTOutput("violations_table"))
       ),
-      bslib::card(bslib::card_header("Violations"), DT::DTOutput("violations_table"))
-    )
-  ),
-
-  bslib::nav_panel(
-    "Capability",
-    selectInput("cap_fridge", "Fridge", choices = character(0)),
-    uiOutput("capability_top"),
-    bslib::layout_columns(
-      col_widths = bslib::breakpoints(sm = 12, lg = 6),
-      bslib::card(
-        bslib::card_header("Baseline readings against the spec"),
-        tags$p(class = "text-muted small mb-0",
-               paste("Bars are the baseline readings. The lines at 1 \u00B0C and 6 \u00B0C are",
-                     "the spec limits for stored red cells, with 3.5 \u00B0C as the target between",
-                     "them. Control limits come from the process itself and are drawn on the",
-                     "X-bar chart on the Fridge Detail page.")),
-        plotlyOutput("hist_chart", height = "320px")
-      ),
-      bslib::card(
-        bslib::card_header("Rolling 24-hour Ppk"),
-        tags$p(class = "text-muted small mb-0",
-               paste("Ppk recomputed over the trailing 96 readings - 24 hours at 15-minute",
-                     "intervals - at each point, using only that window's own spread. It needs",
-                     "at least 24 hours of data. A falling line means the fridge is getting",
-                     "worse now, whatever the baseline says.")),
-        plotlyOutput("rolling_chart", height = "320px")
+      shiny::conditionalPanel(
+        condition = "input.fridge == 'generator'",
+        uiOutput("generator_note"),
+        bslib::card(plotlyOutput("gen_ind_chart", height = "320px"), full_screen = TRUE),
+        bslib::card(plotlyOutput("gen_mr_chart", height = "260px"), full_screen = TRUE)
       )
     )
   ),
 
   bslib::nav_panel(
-    "Backup generator",
-    uiOutput("generator_note"),
-    bslib::card(plotlyOutput("gen_ind_chart", height = "320px"), full_screen = TRUE),
-    bslib::card(plotlyOutput("gen_mr_chart", height = "260px"), full_screen = TRUE)
+    "Capability",
+    tags$style(HTML("
+      .bbm-cap-frame { position: relative; }
+      .bbm-cap-picker { position: absolute; z-index: 2; top: 0.45rem; right: 0.75rem; width: 12.5rem; }
+      .bbm-cap-picker .shiny-input-container { margin-bottom: 0; }
+      .bbm-cap-picker label { color: #FFFFFF; font-size: 0.72rem; margin-bottom: 0.1rem; }
+      .bbm-cap.card { border-left: 7px solid var(--bbm-edge); }
+      .bbm-cap .card-header {
+        background-color: #B3202A; color: #FFFFFF;
+        min-height: 4.6rem; display: flex; align-items: center;
+        padding-right: 14.5rem;
+      }
+      .bbm-cap .card-header h4 { color: #FFFFFF; }
+      @media (max-width: 640px) {
+        .bbm-cap-frame { display: flex; flex-direction: column; }
+        .bbm-cap-picker { position: static; width: auto; order: -1; margin-bottom: 0.75rem; }
+        .bbm-cap-picker label { color: inherit; }
+        .bbm-cap .card-header { padding-right: 1rem; min-height: 0; }
+      }
+    ")),
+    tags$div(
+      class = "bbm-cap-frame mb-3",
+      uiOutput("capability_verdict"),
+      tags$div(class = "bbm-cap-picker", selectInput("cap_fridge", "Fridge", choices = character(0)))
+    ),
+    uiOutput("capability_notes"),
+    bslib::layout_columns(
+      col_widths = bslib::breakpoints(sm = 12, lg = 6),
+      bslib::card(
+        bslib::card_header("Baseline readings against the spec"),
+        tags$p(class = "text-muted small mb-1",
+               "The band between the lines is 1\u20136 \u00B0C."),
+        tags$details(
+          class = "small text-muted mb-2",
+          tags$summary("How to read this chart"),
+          tags$p(class = "mt-2 mb-0",
+                 paste("Bars are the baseline readings. The lines at 1 \u00B0C and 6 \u00B0C are",
+                       "the spec limits for stored red cells, with 3.5 \u00B0C as the target between",
+                       "them. Control limits come from the process itself and are drawn on the",
+                       "X-bar chart on the Fridge and Generator Detail page."))
+        ),
+        plotlyOutput("hist_chart", height = "320px")
+      ),
+      bslib::card(
+        bslib::card_header("Rolling 24-hour Ppk"),
+        tags$p(class = "text-muted small mb-1", "The dashed line is 1.0."),
+        tags$details(
+          class = "small text-muted mb-2",
+          tags$summary("How to read this chart"),
+          tags$p(class = "mt-2 mb-0",
+                 paste("Ppk recomputed over the trailing 96 readings - 24 hours at 15-minute",
+                       "intervals - at each point, using only that window's own spread. It needs",
+                       "at least 24 hours of data. A falling line means the fridge is getting",
+                       "worse now, whatever the baseline says."))
+        ),
+        plotlyOutput("rolling_chart", height = "320px")
+      )
+    ),
+    uiOutput("capability_generator")
   ),
 
   bslib::nav_panel(
@@ -585,6 +1321,8 @@ ui <- bslib::page_navbar(
       bslib::nav_panel("Backup generator log", DT::DTOutput("preview_generator"))
     )
   ),
+
+  bslib::nav_panel("Docs", docs_page()),
 
   bslib::nav_spacer(),
   bslib::nav_item(bslib::input_dark_mode(id = "color_mode"))
@@ -695,9 +1433,13 @@ server <- function(input, output, session) {
   # ---- Fridge pickers
   observeEvent(analyses(), {
     ids <- sort(names(analyses()))
-    choices <- stats::setNames(ids, fridge_label(ids))
-    updateSelectInput(session, "fridge", choices = choices, selected = if (isTRUE(input$fridge %in% ids)) input$fridge else ids[1])
-    updateSelectInput(session, "cap_fridge", choices = choices, selected = if (isTRUE(input$cap_fridge %in% ids)) input$cap_fridge else ids[1])
+    fridge_choices <- stats::setNames(ids, fridge_label(ids))
+    # The generator is a site log. It is a choice on this page only, never a fridge
+    # on the Capability picker.
+    detail_choices <- c(fridge_choices, stats::setNames(GENERATOR_CHOICE, "Backup generator"))
+    keep <- if (isTRUE(input$fridge %in% c(ids, GENERATOR_CHOICE))) input$fridge else ids[1]
+    updateSelectInput(session, "fridge", choices = detail_choices, selected = keep)
+    updateSelectInput(session, "cap_fridge", choices = fridge_choices, selected = if (isTRUE(input$cap_fridge %in% ids)) input$cap_fridge else ids[1])
   }, ignoreNULL = FALSE)
 
   detail <- reactive({
@@ -720,7 +1462,7 @@ server <- function(input, output, session) {
   output$status_card <- renderUI({
     if (length(analyses()) == 0) return(NULL)
     tags$div(
-      class = "bbm-status rounded-3 p-3 px-4 mb-3",
+      class = "bbm-status rounded-3 p-3 px-4 h-100 mb-0",
       tags$p(class = "mb-3 fw-semibold", style = "font-size: 1.2rem;",
              tags$span(class = "me-2", "Status:"),
              shift_status(analyses())),
@@ -757,25 +1499,23 @@ server <- function(input, output, session) {
       bslib::layout_columns(
         fill = FALSE, class = "mt-3",
         col_widths = bslib::breakpoints(sm = 12, md = 6),
-        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "The mean of each fridge\'s Ppk, counted in sigmas. Above 1.0 means the baseline temperatures fit inside 1\u20136 \u00B0C. Higher means a tighter fit.",
+        stat_box("Average Ppk", fmt_num(s$average_ppk, 2), "Mean of each fridge's Ppk, in sigmas. Above 1.0, the baseline fits inside 1\u20136 \u00B0C.",
                  quiet = TRUE, value_class = ppk_class),
         stat_box("Last backup test", transfer,
-                 if (is.na(s$last_transfer)) "No backup test loaded." else "Last backup test \u00b7 team-chosen threshold (10 s); the manager sets it for their own site. Transfer time measures how many seconds it takes to switch to backup power.",
+                 if (is.na(s$last_transfer)) "No backup test loaded." else "Seconds to backup power. The 10 s line is a threshold the manager sets for their own site.",
                  quiet = TRUE, value_class = if (over) "bbm-over" else NULL)
       )
     )
   })
 
-  # Dataset picker on the Overview. The Overview is built from whatever is loaded, and
-  # until now the only way to change that was the Data page's picker plus its Load button.
-  # This dropdown applies immediately, and is kept in sync with the Data page picker, so
-  # the two always show the same dataset.
+  # Dataset picker on the Overview, on the same row as the status sentence. The dropdown
+  # applies immediately and stays in step with the Data page picker. The card is the
+  # dropdown, the upload warning, and one line. The longer description stays on the Data page.
   output$overview_dataset_picker <- renderUI({
     bslib::card(
       fill = FALSE,
+      class = "h-100",
       bslib::card_header("Dataset"),
-      tags$p(class = "text-muted small mb-2",
-             "Every number and card on this page is computed from the dataset selected here."),
       selectInput("overview_dataset", NULL, choices = DATASET_CHOICES,
                   selected = overview_dataset_id()),
       if (isTRUE(rv$manual_upload)) {
@@ -783,33 +1523,36 @@ server <- function(input, output, session) {
                paste("Uploaded files are in use, so the numbers above are not this dataset.",
                      "Pick a dataset here to replace them."))
       },
-      tags$p(class = "text-muted small mb-0", DATASET_HELP)
+      tags$p(class = "text-muted small mb-0", DATASET_HELP_SHORT)
     )
   })
 
-  # The single description card. These two paragraphs used to be repeated under all six
-  # fridge cards; they explain the columns every card shares, so they are stated once.
+  # The column meanings, stated once and closed. Open it when someone asks what a
+  # number means. The phrases stay in the page so a test can still find them.
   output$overview_notes <- renderUI({
     if (length(analyses()) == 0) return(NULL)
     bslib::card(
       fill = FALSE,
-      bslib::card_header("How to read the fridge cards"),
-      tags$p(class = "text-muted small mb-2",
+      class = "mb-3",
+    tags$details(
+      class = "small text-muted",
+      tags$summary("How to read the fridge cards"),
+      tags$p(class = "mt-2 mb-2",
              paste("Blood units are the bags stored. Ppk is the room between this",
                    "fridge's readings and the nearer of 1 °C or 6 °C, counted in",
-                   "sigmas. Out of spec in is the forecast time until the fitted line",
-                   "reaches 1 °C or 6 °C. Mean and Std dev are the fridge's baseline",
-                   "average temperature and its typical hour-to-hour spread, from the",
+                   "sigmas. Mean and Std dev are the fridge's baseline average",
+                   "temperature and its typical hour-to-hour spread, from the",
                    "first 48 hours.")),
-      tags$p(class = "text-muted small mb-2",
+      tags$p(class = "mb-2",
              paste("Risk priority number is severity × occurrence × urgency, each scored 1 to 10.",
                    "Severity is the bag count banded 1 to 10, occurrence is the worst",
                    "special-cause pattern that fired, and urgency is how soon the forecast",
                    "reaches 1 °C or 6 °C. Higher acts first.")),
-      tags$p(class = "text-muted small mb-0",
+      tags$p(class = "mb-0",
              paste("The sentence under each card is that fridge's own newest special-cause",
                    "meaning, from the last 24 hours; \"No special-cause flag.\" means its last",
                    "day was clean."))
+    )
     )
   })
 
@@ -824,29 +1567,32 @@ server <- function(input, output, session) {
     names(rank_of) <- ids
     list_a <- list_a[order(ids)]
     cards <- lapply(list_a, function(a) {
+      htmltools::tagAppendAttributes(
       bslib::card(
         fill = FALSE,
+        class = "bbm-fridge",
         bslib::card_header(
           class = "d-flex justify-content-between align-items-center",
           tags$strong(a$fridge_id), status_badge(a)
         ),
-        plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "90px"),
         tags$div(
-          class = "row text-center small g-1 mb-2",
-          tags$div(class = "col-4", tags$div(class = "text-muted", "Blood units"), tags$strong(a$blood_units)),
-          tags$div(class = "col-4", tags$div(class = "text-muted", "Ppk"), tags$strong(fmt_num(a$ppk, 2))),
-          tags$div(class = "col-4", tags$div(class = "text-muted", "Out of spec in"), tags$strong(a$hours_text)),
-          tags$div(class = "col-4", tags$div(class = "text-muted", "RPN"), tags$strong(a$rpn)),
-          tags$div(class = "col-4", tags$div(class = "text-muted", "Mean (\u00B0C)"),
-                   tags$strong(fmt_num(if (isTRUE(a$has_limits)) a$baseline$center else NA_real_, 2))),
-          tags$div(class = "col-4", tags$div(class = "text-muted", "Std dev (\u00B0C)"),
-                   tags$strong(fmt_num(if (isTRUE(a$has_limits)) a$baseline$sigma_short else NA_real_, 2)))
+          class = "row g-2 align-items-center mb-2",
+          tags$div(
+            class = "col-7",
+            plotlyOutput(paste0("spark_", safe_id(a$fridge_id)), height = "180px")
+          ),
+          tags$div(
+            class = "col-5 d-flex flex-column justify-content-center gap-1 small",
+            card_stat("Blood units", a$blood_units),
+            card_stat("Ppk", fmt_num(a$ppk, 2)),
+            card_stat("RPN", sprintf("%d (%d \u00d7 %d \u00d7 %d)", a$rpn, a$severity, a$occurrence, a$urgency)),
+            card_stat("Mean (\u00B0C)", fmt_num(if (isTRUE(a$has_limits)) a$baseline$center else NA_real_, 2)),
+            card_stat("Std dev (\u00B0C)", fmt_num(if (isTRUE(a$has_limits)) a$baseline$sigma_short else NA_real_, 2))
+          )
         ),
-        tags$p(class = "small mb-1",
-               sprintf(paste("Risk priority number: severity %d × occurrence %d × urgency %d = %d.",
-                             "Higher acts first."),
-                       a$severity, a$occurrence, a$urgency, a$rpn)),
         tags$p(class = "mb-0 small", a$flag_sentence)
+      ),
+      style = sprintf("--bbm-edge:%s;", a$status_color)
       )
     })
     do.call(bslib::layout_columns,
@@ -963,63 +1709,16 @@ server <- function(input, output, session) {
     a
   })
 
+  # capability_top is the same three pieces, kept together so a test can read one
+  # output. The page itself shows the verdict, the notes, the charts, then the generator.
+  output$capability_verdict <- renderUI(capability_verdict_card(cap()))
+  output$capability_notes <- renderUI(capability_notes_card(cap()))
+  output$capability_generator <- renderUI(capability_generator_card(generator_stats(gen())))
   output$capability_top <- renderUI({
-    a <- cap()
-    sentence <- if (a$capable_sentence %in% CAPABLE_SENTENCES) {
-      paste0(fridge_label(a$fridge_id), " is ", a$capable_sentence, ".")
-    } else {
-      paste0(fridge_label(a$fridge_id), ": ", a$capable_sentence)
-    }
-    lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
-      sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
-
-    # Backup generator statistics: a projection of what generator_analysis() already
-    # computed. Nothing is derived here, so these match the Backup generator page.
-    gs <- generator_stats(gen())
-    gen_card <- if (is.null(gs)) {
-      bslib::card(fill = FALSE,
-        tags$h5(class = "mb-1", "Backup generator"),
-        tags$p(class = "text-muted small mb-0",
-               "No backup generator log loaded. Add one on the Data page to see the backup power statistics here."))
-    } else {
-      bslib::card(fill = FALSE,
-        tags$h5(class = "mb-1", "Backup generator"),
-        tags$p(class = "text-muted small",
-          paste("The backup generator carries the fridges through a mains outage.",
-                "Transfer time is the number that matters: the seconds between the",
-                "power failing and the backup generator picking up the load, and during that",
-                "gap nothing is cooling, so the bags are exposed for exactly that long.")),
-        bslib::layout_columns(
-          fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
-          bslib::value_box("Last transfer", box_value(fmt_num(gs$last, 1), generator_ok(gs$last)),
-                           tags$small("seconds, from the most recent test")),
-          bslib::value_box("Typical transfer", box_value(fmt_num(gs$typical, 1), generator_ok(gs$typical)),
-                           tags$small("seconds, the center of the chart")),
-          bslib::value_box("Tests beyond the limits", box_value(sprintf("%d", gs$beyond), zero_ok(gs$beyond)),
-                           tags$small(sprintf("of %d tests run", gs$n)))
-        ),
-        tags$p(class = "text-muted small mb-0",
-               "The 10 s line is a threshold the team chose, not a control limit."))
-    }
-
     tagList(
-      bslib::layout_columns(
-        fill = FALSE, col_widths = bslib::breakpoints(sm = 12, md = 4),
-        bslib::value_box("Cpk (short-term sigma)", box_value(fmt_num(a$cpk, 2), cap_ok(a$cpk)),
-          tags$small(paste("Room left if this fridge keeps holding temperature the way it",
-                           "has been holding it hour to hour. Above 1.0 is room to spare;",
-                           "below 1.0 it cannot reliably stay in spec."))),
-        bslib::value_box("Ppk (overall sigma)", box_value(fmt_num(a$ppk, 2), cap_ok(a$ppk)),
-          tags$small(paste("The same room measured across the whole baseline, drift and",
-                           "hour-to-hour shifts included. This is the long-run number."))),
-        bslib::value_box("Gap (Cpk minus Ppk)", box_value(fmt_num(a$gap, 2), gap_ok(a$gap)),
-          tags$small(paste("A stability signal, not a score. Near zero means the fridge is",
-                           "steady. Clearly positive means it holds temperature within an",
-                           "hour but wanders between hours, which is a stability problem",
-                           "rather than a capability problem.")))
-      ),
-      bslib::card(fill = FALSE, tags$h4(class = "mb-1", sentence), tags$p(class = "text-muted small mb-0", lag_text)),
-      gen_card
+      capability_verdict_card(cap()),
+      capability_notes_card(cap()),
+      capability_generator_card(generator_stats(gen()))
     )
   })
   output$hist_chart <- renderPlotly(histogram_plot(cap(), dark()))

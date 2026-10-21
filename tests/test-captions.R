@@ -29,8 +29,7 @@ ui_html <- as.character(env$ui)
 demo <- load_demo_data(data_dir)
 all_analyses <- analyze_all(demo$readings, demo$inventory)
 fridge_expectations <- vapply(all_analyses, function(a) {
-  sprintf("severity %d \u00D7 occurrence %d \u00D7 urgency %d = %d",
-          a$severity, a$occurrence, a$urgency, a$rpn)
+  sprintf("%d (%d \u00D7 %d \u00D7 %d)", a$rpn, a$severity, a$occurrence, a$urgency)
 }, character(1))
 
 # ------------------------------------------------------ the fridge card
@@ -73,17 +72,18 @@ test_that("the fridge card says what each of its four fields means", {
                  info = "Blood units must say they are the bags stored")
     expect_match(notes, "nearer of 1", fixed = TRUE,
                  info = "Ppk must say it is measured to the nearer spec limit")
-    expect_match(notes, "fitted line", fixed = TRUE,
-                 info = "'Out of spec in' must say it is the forecast time")
     expect_match(notes, "first 48 hours", fixed = TRUE,
                  info = "Mean and Std dev must say they come from the baseline")
+    expect_false(grepl("Out of spec", notes, fixed = TRUE),
+                 info = "the forecast column is gone, so the notes must not explain it")
 
-    # The three factors are named, not just printed, and the per-card arithmetic
-    # line stays on each card with that card's own numbers.
+    # The three factors are named in the collapsed note. The card shows the
+    # product, not the sentence that used to repeat under every fridge.
     for (word in c("severity", "occurrence", "urgency")) {
       expect_match(notes, word, fixed = TRUE, info = paste("notes:", word))
-      expect_match(cards, word, fixed = TRUE, info = paste("cards:", word))
     }
+    expect_false(grepl("Higher acts first", cards, fixed = TRUE))
+    expect_false(grepl("Risk priority number:", cards, fixed = TRUE))
 
     # And the shared prose must NOT be repeated under every card any more.
     expect_false(grepl("bags stored", cards, fixed = TRUE),

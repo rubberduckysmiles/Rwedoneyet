@@ -1345,3 +1345,280 @@ tasks:
       from 172d6cf7eb004d18ac9c919bb9069ab4 to ae694c270841b6648fbd8659f2c93b7e in a one-line diff that
       preserves the file's CRLF and trailing newline; all 22 bundled checksums match and the platform is
       unchanged at 4.5.2.
+
+  - id: H-38
+    title: "Fridge cards: drop Out of spec in, and put the numbers beside a taller chart"
+    points: "tool clarity: the card shows the numbers the manager uses, and the hourly chart has room to be read"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 20:55"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-captions.R", "tests/test-formatting_overview.R", "tests/test-sparkline_label.R", "README.md", "Demo.md", "CODEBOOK.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. "Out of spec in" leaves the fridge
+      card and the how-to-read paragraph. The forecast function stays: urgency
+      and the 12-hour amber rule still use hours_to_spec, and demo/show_numbers.R
+      still prints the hours. The five remaining numbers (blood units, Ppk, RPN,
+      mean, standard deviation) sit to the right of the chart. The chart grows
+      from 90 px tall across the whole card to 180 px tall in the left portion
+      of the card. No statistic, badge, limit or rank changes.
+    definition_of_done: >
+      The rendered fridge cards contain no "Out of spec" text. The plot is
+      180 px tall and sits in a column to the left of Blood units, Ppk, RPN,
+      Mean and Std dev. The how-to-read card no longer explains a forecast
+      column. hours_to_spec is unchanged: demo/show_numbers.R still prints
+      F02 hours as "already out" and DEMO OK, and app/workflow.R prints
+      WORKFLOW OK. testthat prints 0 failures. app/manifest.json's app.R
+      checksum matches the LF-normalised file.
+    result: >
+      Out of spec in is off the fridge card and out of the how-to-read paragraph. The five remaining
+      numbers sit to the right of a 180 px chart that takes the left portion of the card. The forecast
+      still runs: urgency and the 12-hour amber rule use it, and demo/show_numbers.R still prints F02
+      hours as already out. Quoted: tests/test-formatting_overview.R FAIL 0 | WARN 0 | SKIP 0 | PASS 174,
+      tests/test-captions.R PASS 39, tests/test-sparkline_label.R PASS 17, the full suite FAIL 0 | WARN 0
+      | SKIP 0 | PASS 1319 (was 1311), app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK with 4
+      fridges needing action, 283 bags, average Ppk 5.719 and transfer 48 seconds. A browser load of the
+      Overview showed the chart on the left of each card and no Out of spec in label. app/manifest.json's
+      app.R checksum moved from ae694c270841b6648fbd8659f2c93b7e to 7af9dc3dbc3103cf8ed64814366053e1,
+      the md5 of the LF-normalised file. No statistic, badge, limit or rank moved.
+
+  - id: H-39
+    title: "Put the dataset dropdown beside the status line"
+    points: "tool clarity: the manager can change the dataset without scrolling past the numbers, and the card does not repeat the Data page"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 21:05"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-formatting_overview.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, the next pass after H-38. The dataset
+      card moves onto the same row as the status sentence, status on the left
+      and the dropdown on the right. The card keeps the dropdown, the upload
+      warning, and one line: bad is ordinary noise and good is the mixed set.
+      The longer description stays on the Data page. No statistic changes.
+    definition_of_done: >
+      The Overview renders the status sentence and the dataset dropdown in one
+      row, with the dropdown to the right from the lg breakpoint up, and the
+      summary boxes below that row. The Overview dataset card does not repeat
+      the Data page's three-sentence description. The upload warning still
+      appears when a file is uploaded and disappears when a dataset is loaded.
+      testthat prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      The dataset dropdown sits on the same row as the status sentence, to its right on a wide
+      window and stacked under it on a narrow one. The card is the dropdown, the upload warning,
+      and one line: bad is ordinary noise and good is the mixed set. The three-sentence description
+      stays on the Data page. A browser load showed the status box on the left and the Dataset card
+      on the right, with the four summary boxes below. Quoted: tests/test-formatting_overview.R
+      FAIL 0 | WARN 0 | SKIP 0 | PASS 181, the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1326
+      (was 1319), app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK. app/manifest.json's
+      app.R checksum moved from 7af9dc3dbc3103cf8ed64814366053e1 to cf4f0cd2e833d2a7f0ac6a255d9c7d5c,
+      the md5 of the LF-normalised file. No statistic moved.
+
+  - id: H-40
+    title: "Overview: collapse the how-to-read note and cut the repeated sentences"
+    points: "tool clarity: the manager reaches the fridge cards without reading the same explanation three times"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 21:12"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-captions.R", "tests/test-formatting_overview.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, the next pass after H-39. The
+      how-to-read text collapses behind a disclosure, so it is still there
+      when someone asks. Each fridge card drops the sentence "Risk priority
+      number: severity × occurrence × urgency = N. Higher acts first." The
+      card keeps the RPN and shows the product as N (a × b × c). Average Ppk
+      and Last backup test each keep one line, including sigmas, 1.0,
+      threshold, own site, and backup power. The footer keeps only the frozen
+      limits sentence. No statistic changes.
+    definition_of_done: >
+      The how-to-read text is inside a closed details element and still
+      contains the column meanings. No fridge card contains "Higher acts
+      first" or "Risk priority number:". Each card still shows its RPN as
+      the product of its three factors. The Average Ppk note contains
+      "sigmas" and "1.0". The transfer note contains "threshold", "own site",
+      and "power". The footer is the frozen-limits sentence only. testthat
+      prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      How to read the fridge cards is a closed disclosure. Each card dropped the
+      sentence and shows the risk priority number as the product, for example
+      900 (9 × 10 × 10). Average Ppk and Last backup test are one line each, and
+      the footer is only the frozen-limits sentence. A browser load showed the
+      disclosure closed and the six cards directly under it. Quoted: tests/test-captions.R
+      FAIL 0 | WARN 0 | SKIP 0 | PASS 38, tests/test-formatting_overview.R PASS 182,
+      the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1326, app/workflow.R WORKFLOW OK,
+      demo/show_numbers.R DEMO OK. app/manifest.json's app.R checksum moved from
+      cf4f0cd2e833d2a7f0ac6a255d9c7d5c to c23bfdc7ea518aa915db46e8c425242a.
+      No statistic moved.
+
+  - id: H-41
+    title: "Dark red title bar, and the badge color on each fridge card"
+    points: "tool clarity: the name reads as the product, and a fridge that needs action is the color of its badge"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 21:18"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-formatting_overview.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The navbar background is #B3202A
+      with light text, so the name sits on a dark red bar. Each fridge card
+      keeps its border. The card's own shadow is the border, so the badge
+      color (green #2E9E6B, amber #E8A33D, red #D64045, gray #8A8F98) is a
+      left border and does not replace that shadow. How to read the fridge cards stays a closed
+      dropdown, and that dropdown stays inside a card so its border remains.
+      No statistic changes.
+    definition_of_done: >
+      The navbar background is #B3202A. Each rendered fridge card carries
+      its own badge color as --bbm-edge and keeps the card class, and the
+      page style paints that color as a left border without replacing the
+      card's shadow. The how-to-read text is still a closed details element
+      inside a card. testthat prints 0 failures. DEMO OK and WORKFLOW OK
+      still print. app/manifest.json's app.R checksum matches the
+      LF-normalised file.
+    result: >
+      The name sits on a dark red bar, rgb(179, 32, 42), with white title text.
+      Each fridge card keeps the same shadow border as the other cards and adds
+      a 7 px left edge in its badge color: green for F01, red for F02. How to
+      read the fridge cards stays a closed dropdown inside a card. Quoted:
+      tests/test-formatting_overview.R FAIL 0 | WARN 0 | SKIP 0 | PASS 195, the
+      full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1339 (was 1326), app/workflow.R
+      WORKFLOW OK, demo/show_numbers.R DEMO OK. app/manifest.json's app.R
+      checksum moved from c23bfdc7ea518aa915db46e8c425242a to
+      7fbf4ba05b213267ff62dd0673cc7b02. No statistic moved.
+
+  - id: H-42
+    title: "Capability page: verdict bar, short numbers, chart marks, one generator row"
+    points: "tool clarity: the manager reads the fridge's sentence first, then the numbers and the two charts"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 21:39"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-capability_layout.R", "SPEC.md", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The sentence sits on a dark red
+      bar. The card keeps its border, and the sentence color (green, amber,
+      red, or gray) is a left border. Cpk, Ppk, and the gap keep one line
+      each. The longer reading, the lag-1 note, and the difference between
+      this bar and the Overview badge sit in a closed dropdown. The histogram
+      shades 1 °C to 6 °C. The rolling Ppk chart draws a line at 1.0. The
+      backup generator keeps its three numbers on one row. No statistic,
+      cutoff, or color rule changes.
+    definition_of_done: >
+      The Capability page shows the sentence on a card with class bbm-cap
+      and a --bbm-edge color, the how-to-read text inside a closed details
+      element, a histogram band from 1 to 6, and a rolling Ppk line at 1.
+      testthat prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      The sentence sits on a dark red bar, rgb(179, 32, 42), with white text,
+      and the card keeps the same shadow as the other cards plus a 7 px left
+      edge in the sentence color: amber for Fridge 01. The fridge picker sits
+      on that bar. Cpk, Ppk, and the gap are one line each. How to read these
+      numbers is a closed dropdown and opens to the lag-1 note. The histogram
+      shades 1–6 °C. The rolling chart draws a dashed line at 1.0. The
+      generator is one row: last transfer 48.0, typical 7.5, one test beyond
+      the limits. Switching the picker to Fridge 02 updates the sentence.
+      Quoted: tests/test-capability_layout.R FAIL 0 | WARN 0 | SKIP 0 | PASS 26,
+      the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1370 (was 1339),
+      app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
+      app/manifest.json's app.R checksum moved from
+      7fbf4ba05b213267ff62dd0673cc7b02 to 517ad761e421c5838b09eb1ba65d4262.
+      No statistic moved.
+
+  - id: H-43
+    title: "One detail tab for fridges and the generator, plus a Docs page"
+    points: "tool clarity: the generator charts live with the fridge charts, and the method, the data, and the team are on one page"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 21:54"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-detail_and_docs.R", "SPEC.md", "README.md", "Demo.md", "app/README.md", "CODEBOOK.md", "hi_friends.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The Backup generator tab becomes
+      a choice on Fridge and Generator Detail. The fridge charts, the zone
+      lines, and the date range stay for a fridge. The generator choice shows
+      the individuals chart and the moving-range chart. A Docs page opens
+      with the user, the inputs, and a link to data/README.md, then closed
+      dropdowns for the team, how to use the tool, the methods, the data,
+      the tests, and the assumptions. Team members are Hannah Brine, Sue Cho,
+      and Tanya Schilling. No statistic changes.
+    definition_of_done: >
+      The navbar has Fridge and Generator Detail and Docs, and no separate
+      Backup generator tab. Choosing generator renders the transfer charts.
+      The Docs page names Hannah Brine, Sue Cho, and Tanya Schilling, and
+      the six dropdowns start closed. testthat prints 0 failures. DEMO OK
+      and WORKFLOW OK still print. app/manifest.json's app.R checksum
+      matches the LF-normalised file.
+    result: >
+      Fridge and Generator Detail is one dropdown. A fridge keeps the X-bar,
+      range, and standard deviation charts. Backup generator, the last choice,
+      shows the individuals chart and the moving-range chart, and hides the
+      zone lines. Docs opens with the user, the three files, and a link to
+      data/README.md, then closed dropdowns. Meet The Team names Hannah Brine,
+      Sue Cho, and Tanya Schilling. Quoted: tests/test-detail_and_docs.R
+      FAIL 0 | WARN 0 | SKIP 0 | PASS 25, the full suite FAIL 0 | WARN 0 |
+      SKIP 0 | PASS 1399 (was 1370), app/workflow.R WORKFLOW OK,
+      demo/show_numbers.R DEMO OK. app/manifest.json's app.R checksum moved
+      from 517ad761e421c5838b09eb1ba65d4262 to 82fec731b7904d53087a65f839d9b758.
+      No statistic moved.
+
+  - id: H-44
+    title: "Docs page: a header, four facts, and sections that expand"
+    points: "tool clarity: the documentation reads as one page, and each section says what is inside it before it opens"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 22:01"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-detail_and_docs.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20, after the EMS Response Monitor
+      documentation page. Docs keeps the same words. The top is one card:
+      a kicker, the title, the summary, four facts, and links. Each section
+      stays closed, with a one-line subtitle and a plus. Expand all opens
+      them. No statistic changes.
+    definition_of_done: >
+      The Docs page contains the kicker, four facts, the codebook link, the
+      three team names, and six closed sections. Expand all is on the page.
+      testthat prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      Docs opens as one card: the kicker, Bank of Bloody Mary, the summary,
+      four facts (user, inputs, data, tests), and links to the repository,
+      the README, and the data codebook. Six sections stay closed, each with
+      a subtitle and a plus. Expand all opens all six, shows Hannah Brine,
+      Sue Cho, and Tanya Schilling, and the button reads Collapse all.
+      Quoted: the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1402 (was 1399),
+      app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
+      app/manifest.json's app.R checksum moved from
+      82fec731b7904d53087a65f839d9b758 to 4cfddb06f67c94385b4ca87c73614597.
+      No statistic moved.
+
+  - id: H-45
+    title: "Docs page: wider layout, open team, equations, and tables"
+    points: "tool clarity: the documentation is wide enough to read, and the method, the data, the tests, and the assumptions are scannable"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-20 22:13"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-detail_and_docs.R", "README.md", "Demo.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-20. The Docs column is wider and
+      centered. The summary drops the tests fact. Inputs reads "Fridge
+      temperature recordings the lab already logs". The Team is Hannah Brine,
+      Sue Cho, and Tanya Schilling, with no dropdown. How to use is a numbered
+      list. Statistical Methods shows the equations the code already uses.
+      Data names each file, its row count, and a link. Tests and Verification
+      and Assumptions and Limitations use tables. No statistic changes.
+    definition_of_done: >
+      The Docs page is a centered column, the summary has three facts and not
+      a tests fact, The Team is not a dropdown, and the four reading sections
+      contain the equations, the row counts, and the tables. testthat prints
+      0 failures. DEMO OK and WORKFLOW OK still print.       app/manifest.json's
+      app.R checksum matches the LF-normalised file.
+    result: >
+      Docs is a centered column, 1240 px wide with equal side margins on a
+      1440 px window. The summary has three facts, and Inputs reads "Fridge
+      temperature recordings the lab already logs". The Team names Hannah
+      Brine, Sue Cho, and Tanya Schilling and is not a dropdown. How to use
+      is three numbered steps. Statistical Methods shows the equations the
+      code already uses. Data shows 4,032, 40, and 30 rows, each with a link.
+      Tests and Verification and Assumptions and Limitations use tables.
+      Expand all opens the five sections. Quoted: the full suite FAIL 0 |
+      WARN 0 | SKIP 0 | PASS 1408 (was 1402), app/workflow.R WORKFLOW OK,
+      demo/show_numbers.R DEMO OK. app/manifest.json's app.R checksum moved
+      from 4cfddb06f67c94385b4ca87c73614597 to d33bea9ece0c86466a8e0449b943cf5b.
+      No statistic moved.

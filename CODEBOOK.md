@@ -15,7 +15,7 @@
 | Capability cutoff | 1.0 | README §5, §6 | Cpk >= 1.0 for "capable". |
 | Forecast horizon rule | after hour 48; "already out" or `Inf` when none | `hours_to_spec` | Conservative prediction. |
 |---|---|---|---|
-| Generator threshold | 10 seconds | README §5, §7, app UI (Overview/Backup generator) | **Team-chosen assumption. Not a spec limit and not a control limit.** Set for each site's own test. |
+| Generator threshold | 10 seconds | README §5, §7, app UI (Overview, and Fridge and Generator Detail) | **Team-chosen assumption. Not a spec limit and not a control limit.** Set for each site's own test. |
 | Seeds | 5300 (data), 5301 (blood types) | `data/make_data.R` | Synthetic data reproducibility. |
 | Blood type frequencies (generator input) | O+ 38%, A+ 32%, B+ 9%, O- 7%, A- 6%, AB+ 3%, B- 2%, AB- 1% (sum 98%, renormalized) | `data/make_data.R` (rmultinom); `data/README.md` | Chosen distribution for synthetic draw, not computed from inventory. |
 
@@ -33,7 +33,7 @@
 | Capability (Cpk, Ppk, gap) | `capability_indices` | Capability tab; Cpk uses sigma_short, Ppk uses sigma_overall, gap = Cpk-Ppk |
 | Baseline freeze (limits + cap) | `freeze_baseline` | First 48h, min 25; lag1 stored |
 | Special cause tests 1–8 | `special_cause_test_*` | Violations table + meanings |
-| Hours to spec | `hours_to_spec` | Fridge card "Out of spec in" |
+| Hours to spec | `hours_to_spec` | Not shown. Still sets urgency, and a crossing within 12 h can turn the badge amber |
 | Rolling Ppk | `rolling_ppk` | Capability chart (96 readings) |
 | Severity, occurrence, urgency | `severity_score`, `worst_occurrence`, `urgency_score` | Fridge card RPN |
 | RPN | `rpn` | Fridge card (severity*occurrence*urgency) |

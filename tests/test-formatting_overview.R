@@ -99,8 +99,9 @@ test_that("the shared explanations live in one card and not on every fridge card
     cards <- paste(unlist(output$fridge_cards), collapse = " ")
     notes <- paste(unlist(output$overview_notes), collapse = " ")
 
-    expect_true(nchar(notes) > 0, info = "the description card must render")
-    for (phrase in c("bags stored", "nearer of 1", "fitted line reaches", "first 48 hours")) {
+    expect_true(nchar(notes) > 0, info = "the description must render")
+    expect_match(notes, "<details", fixed = TRUE, info = "the how-to-read text starts closed")
+    for (phrase in c("bags stored", "nearer of 1", "first 48 hours")) {
       expect_match(notes, phrase, fixed = TRUE, info = paste("notes card:", phrase))
     }
     # The column list and the whole paragraph must not be repeated per card.
@@ -123,6 +124,51 @@ test_that("the description card states the explanation once, not six times", {
     # "bags stored" appears once in the notes and nowhere on the cards.
     expect_equal(lengths(regmatches(notes, gregexpr("bags stored", notes, fixed = TRUE))), 1L)
     expect_equal(lengths(regmatches(cards, gregexpr("bags stored", cards, fixed = TRUE))), 0L)
+  })
+})
+
+test_that("the badge color sits on the fridge card and the title bar is dark red", {
+  html <- as.character(env$ui)
+  expect_match(html, "#B3202A", fixed = TRUE, info = "the name sits on the dark red bar")
+  expect_match(html, "border-left: 7px solid var(--bbm-edge)", fixed = TRUE,
+               info = "the badge color is a left edge")
+  expect_false(grepl("bbm-fridge.card { box-shadow", html, fixed = TRUE),
+               info = "the color edge must not replace the card's own shadow border")
+
+  shiny::testServer(env$server, {
+    session$setInputs(fridge = "F01", color_mode = "light")
+    cards <- paste(unlist(output$fridge_cards), collapse = " ")
+    notes <- paste(unlist(output$overview_notes), collapse = " ")
+    expect_match(cards, "bbm-fridge", fixed = TRUE)
+    expect_match(cards, "card ", fixed = TRUE, info = "the card class, and its border, stay")
+    for (a in all_analyses) {
+      expect_match(cards, sprintf("--bbm-edge:%s", a$status_color), fixed = TRUE,
+                   info = paste(a$fridge_id, "uses its badge color"))
+    }
+    expect_match(notes, "<details", fixed = TRUE)
+    expect_match(notes, "card", fixed = TRUE, info = "the how-to-read dropdown keeps a card border")
+  })
+})
+
+test_that("the fridge card drops Out of spec in and puts the numbers beside the chart", {
+  skip_if(length(all_analyses) == 0, "no demo readings")
+
+  shiny::testServer(env$server, {
+    session$setInputs(fridge = "F01", color_mode = "light")
+    cards <- paste(unlist(output$fridge_cards), collapse = " ")
+    notes <- paste(unlist(output$overview_notes), collapse = " ")
+
+    expect_false(grepl("Out of spec", cards, fixed = TRUE))
+    expect_false(grepl("Out of spec", notes, fixed = TRUE))
+    expect_match(cards, "180px", fixed = TRUE, info = "the chart is taller than the old 90 px sparkline")
+
+    chart_at <- regexpr("col-7", cards, fixed = TRUE)
+    stats_at <- regexpr("Blood units", cards, fixed = TRUE)
+    expect_true(chart_at > 0 && stats_at > chart_at,
+                info = "the chart column comes before the numbers, so the numbers sit to its right")
+    for (label in c("Blood units", "Ppk", "RPN", "Mean", "Std dev")) {
+      expect_match(cards, label, fixed = TRUE, info = paste("the card still shows", label))
+    }
   })
 })
 
@@ -212,6 +258,33 @@ test_that("the picker re-renders with every dataset still offered", {
     expect_false(grepl('value="scenario_one_bad" selected', html2, fixed = TRUE),
                  info = "no stale selection may stick")
   })
+})
+
+test_that("the dataset dropdown sits beside the status line, above the summary boxes", {
+  html <- as.character(env$ui)
+  status_at <- regexpr('id="status_card"', html, fixed = TRUE)
+  dataset_at <- regexpr('id="overview_dataset_picker"', html, fixed = TRUE)
+  boxes_at <- regexpr('id="overview_boxes"', html, fixed = TRUE)
+  expect_true(status_at > 0 && dataset_at > status_at && boxes_at > dataset_at,
+              info = "status, then the dataset dropdown, then the summary boxes")
+
+  # 8 then 4 puts the dropdown on the right once the row is wide enough.
+  # Both are 12 below that, so a narrow window stacks them.
+  expect_match(html, 'col-widths-lg="8,4"', fixed = TRUE)
+  expect_match(html, 'col-widths-sm="12,12"', fixed = TRUE)
+})
+
+test_that("the Overview dataset card keeps one line and leaves the long description on the Data page", {
+  shiny::testServer(env$server, {
+    session$setInputs(fridge = "F01", color_mode = "light")
+    picker <- paste(unlist(output$overview_dataset_picker), collapse = " ")
+    expect_match(picker, env$DATASET_HELP_SHORT, fixed = TRUE)
+    expect_false(grepl("Every number and card", picker, fixed = TRUE))
+    expect_false(grepl("six fridges with planted failures", picker, fixed = TRUE),
+                 info = "the three-sentence description does not belong on the Overview card")
+  })
+  expect_match(as.character(env$ui), env$DATASET_HELP, fixed = TRUE,
+               info = "the Data page still carries the longer description")
 })
 
 test_that("an upload makes the picker admit the numbers are not a dataset", {
