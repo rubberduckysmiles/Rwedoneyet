@@ -24,7 +24,7 @@ Rscript app/workflow.R
 - The name is on a dark red bar. Each fridge card keeps its border, with a bar in the badge color down the left edge
 - Fridges needing action, blood units at risk, average Ppk, last backup generator transfer
 - The first three are coloured by their value: green at zero (or, for Ppk, at or above 1) and red otherwise, so a number that needs attention is visible at a glance. Average Ppk stays uncoloured until at least one fridge has usable limits
-- Dataset dropdown beside the status line: picking a dataset reloads it at once, and the Data page picker follows. The card says bad is ordinary noise and good is the mixed set. The three choices are General demo (planted failures), Scenario one: good, and Scenario one: bad
+- Dataset dropdown beside the status line: picking a dataset reloads it at once, and the Data page picker follows. The card says Dataset 2 is ordinary noise and Dataset 1 is the mixed set. The three choices are General demo (planted failures), Dataset 1, and Dataset 2
 - "How to read the fridge cards" is collapsed. Open it for the column meanings. Each card shows the risk priority number as the product of its three factors, and does not repeat the formula in a sentence
 - Fridge cards: badge, then the hourly chart on the left (180 px tall) with blood units, Ppk, RPN, mean and standard deviation to its right, then the RPN breakdown and that fridge's own special-cause sentence. The forecast is not printed on the card
 - Limits frozen from first 48 hours

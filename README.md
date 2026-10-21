@@ -104,8 +104,8 @@ Three synthetic datasets ship with the app, and you can switch between them with
 | Dataset | What is in it |
 |---|---|
 | General demo (planted failures) | Six fridges with the planted stories above. |
-| Scenario one: good | Six fridges that each behave differently. |
-| Scenario one: bad | All six are ordinary noise; nothing fails. |
+| Dataset 1 | Six fridges that each behave differently. |
+| Dataset 2 | All six are ordinary noise; nothing fails. |
 
 Pick one from the **dataset dropdown on the Overview**, which applies immediately, or from the picker on the **Data page** and press *Load dataset*. The two keep in step, so they never claim different data is loaded. If you upload your own files, the Overview dropdown says so rather than pretending the numbers on screen are one of the three.
 
