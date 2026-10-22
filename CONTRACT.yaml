@@ -1801,3 +1801,23 @@ tasks:
       WARN 0 | SKIP 0 | PASS 1410, app/workflow.R WORKFLOW OK,
       demo/show_numbers.R DEMO OK. After the merge, app/manifest.json's
       app.R checksum is 376f0bc44b15d86d4b9b8c86249f65f8. No statistic moved.
+
+  - id: H-49
+    title: "Remove the page walkthrough and the stale handoff note"
+    points: "tool documentation: the repo keeps one front door, and the leftover walkthroughs are gone"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21 20:06"
+    owns: ["Demo.md", "hi_friends.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-21. Demo.md repeated the page tour
+      already in README.md and on the Docs page. hi_friends.md was a handoff
+      note that had fallen behind the ledger. CODEBOOK.md stays. Older ledger
+      entries that name these files stay as the record of those tasks.
+    definition_of_done: >
+      Demo.md and hi_friends.md are gone. No current document links to either
+      file. CODEBOOK.md is still at the repo root.
+    result: >
+      Demo.md and hi_friends.md are deleted. A search of the current docs
+      finds their names only in older CONTRACT.yaml entries. CODEBOOK.md
+      remains. No statistic moved.
