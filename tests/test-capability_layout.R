@@ -36,6 +36,8 @@ test_that("the sentence sits on a card whose left edge is the sentence color", {
                  info = "the how-to-read dropdown starts closed")
     expect_match(html, "last day", fixed = TRUE,
                  info = "say that this color and the Overview badge can disagree")
+    expect_false(grepl("Lag-1 autocorrelation", html, fixed = TRUE),
+                 info = "the capability notes do not print the lag-1 sentence")
     expect_false(grepl("carries the fridges", html, fixed = TRUE),
                  info = "the generator essay is one line, not the old paragraph")
   })

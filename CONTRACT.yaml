@@ -1841,3 +1841,53 @@ tasks:
       table, the hand-check row, the capability sentence, and the assumptions
       sentence. A search of README.md for lag-1, Lag-1, and hours_to_spec
       printed no matches. No statistic moved.
+
+  - id: H-51
+    title: "Capability notes no longer print the lag-1 sentence"
+    points: "tool clarity: the how-to-read dropdown explains Cpk, Ppk, and the gap, and does not print a number the team asked to leave off the page"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21 20:21"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-capability_layout.R", "SPEC.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-21. The Capability how-to-read
+      dropdown drops the lag-1 sentence. The Docs assumptions line and
+      SPEC.md no longer say the page prints it. lag1 is still computed.
+      No statistic changes.
+    definition_of_done: >
+      The Capability notes do not contain "Lag-1 autocorrelation".
+      testthat prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      How to read these numbers still explains Cpk, Ppk, the gap, and the
+      difference from the Overview badge. It does not print the lag-1
+      sentence. Quoted: tests/test-capability_layout.R FAIL 0 | WARN 0 |
+      SKIP 0 | PASS 27, the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1446,
+      app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
+      app/manifest.json's app.R checksum moved from
+      376f0bc44b15d86d4b9b8c86249f65f8 to 92a212c268351a52a2c7ae2daee09ffd.
+      No statistic moved.
+
+  - id: H-52
+    title: "Data tab Browse controls sit on one line"
+    points: "tool clarity: the three file pickers on the Data page line up even when one label wraps"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21 20:26"
+    owns: ["app/app.R", "app/manifest.json", "tests/test-dataset_names.R"]
+    notes: >
+      REQUESTED by the team on 2026-10-21. The readings label wraps, so its
+      Browse control sat lower than the inventory and generator controls.
+      The row stretches each picker and pushes the Browse control to the
+      bottom. Labels and statistics are unchanged.
+    definition_of_done: >
+      On a desktop window the three Browse controls share one top edge.
+      testthat prints 0 failures. DEMO OK and WORKFLOW OK still print.
+      app/manifest.json's app.R checksum matches the LF-normalised file.
+    result: >
+      The three Browse controls measured the same top, 132px, at 1280px and
+      at 1000px wide. Quoted: the full suite FAIL 0 | WARN 0 | SKIP 0 |
+      PASS 1450, app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
+      app/manifest.json's app.R checksum moved from
+      92a212c268351a52a2c7ae2daee09ffd to 983258094a3bb03e62dae3a9c8913475.
+      No statistic moved.

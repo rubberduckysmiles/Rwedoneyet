@@ -119,3 +119,13 @@ test_that("the rename is cosmetic: Dataset 1 still loads scenario_one_good", {
     expect_equal(summary_numbers()$units_at_risk, 275)
   })
 })
+
+test_that("the Data page lines the three Browse controls up", {
+  # The readings label wraps onto a second line. The row class stretches each
+  # picker and pushes its Browse control to the bottom of that row.
+  ui_html <- as.character(env$ui)
+  expect_match(ui_html, "bbm-uploads", fixed = TRUE)
+  expect_match(ui_html, "up_readings", fixed = TRUE)
+  expect_match(ui_html, "up_inventory", fixed = TRUE)
+  expect_match(ui_html, "up_generator", fixed = TRUE)
+})

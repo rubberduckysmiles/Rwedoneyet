@@ -560,8 +560,6 @@ capability_verdict_card <- function(a) {
 }
 
 capability_notes_card <- function(a) {
-  lag_text <- if (is.na(a$lag1)) "Lag-1 autocorrelation of the baseline: \u2014." else
-    sprintf("Lag-1 autocorrelation of the baseline readings: %.2f. The limits assume independent readings; this is a limitation, not an adjustment.", a$lag1)
   bslib::card(
     fill = FALSE,
     class = "mb-3",
@@ -580,7 +578,6 @@ capability_notes_card <- function(a) {
                    "steady. Clearly positive means it holds temperature within an hour but",
                    "wanders between hours, which is a stability problem rather than a",
                    "capability problem.")),
-      tags$p(class = "mb-2", lag_text),
       tags$p(class = "mb-0",
              paste("This bar's color is the baseline verdict. The Overview badge looks only",
                    "at the last day, so a fridge can need action today and still read capable here."))
@@ -1106,7 +1103,7 @@ docs_page <- function() {
           list(
             "Normal, independent hours",
             "Sample variances divide by n \u2212 1. The limits are 3 sigma on either side of the center.",
-            "Lag-1 autocorrelation is printed. It is not used to widen the limits."
+            "The limits are not widened when one reading depends on the one before it."
           ),
           list(
             "Frozen baseline",
@@ -1289,7 +1286,16 @@ ui <- bslib::page_navbar(
 
   bslib::nav_panel(
     "Data",
+    tags$style(HTML("
+      .bbm-uploads > .bslib-grid-item { display: flex; flex-direction: column; }
+      .bbm-uploads .shiny-input-container {
+        display: flex; flex-direction: column; flex: 1 1 auto; height: 100%;
+      }
+      .bbm-uploads .shiny-input-container > .input-group { margin-top: auto; }
+    ")),
     bslib::layout_columns(
+      class = "bbm-uploads",
+      fill = FALSE,
       col_widths = bslib::breakpoints(sm = 12, md = 4),
       fileInput("up_readings", "Readings (fridge_id, timestamp, temp_c, door_open, on_generator)", accept = ".csv"),
       fileInput("up_inventory", "Inventory (fridge_id, blood_type, blood_units)", accept = ".csv"),
