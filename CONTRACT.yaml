@@ -1821,3 +1821,23 @@ tasks:
       Demo.md and hi_friends.md are deleted. A search of the current docs
       finds their names only in older CONTRACT.yaml entries. CODEBOOK.md
       remains. No statistic moved.
+
+  - id: H-50
+    title: "README drops lag-1 and hours to spec"
+    points: "tool documentation: the front door no longer explains two quantities the team asked to leave out"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21 20:15"
+    owns: ["README.md"]
+    notes: >
+      REQUESTED by the team on 2026-10-21. README.md no longer names lag-1
+      autocorrelation or hours to spec. The functions stay in app/R. The
+      amber badge line still says a forecast crossing within 12 hours can
+      turn the badge amber, because that is still what the badge does.
+    definition_of_done: >
+      A search of README.md finds no lag-1, no Lag-1, and no hours_to_spec.
+    result: >
+      Those names are gone from README.md: the function rows, the manager
+      table, the hand-check row, the capability sentence, and the assumptions
+      sentence. A search of README.md for lag-1, Lag-1, and hours_to_spec
+      printed no matches. No statistic moved.
