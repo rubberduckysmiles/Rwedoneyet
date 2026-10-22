@@ -1624,6 +1624,156 @@ tasks:
       No statistic moved.
 
   - id: H-46
+    title: "Dataset names: show \"Dataset 1\" and \"Dataset 2\" in the pickers, and make the wording around them agree"
+    points: "tool clarity: a manager reads the dataset name off the dropdown, so the name and the caption beside it must say the same thing"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21"
+    owns: ["app/app.R", "README.md", "Demo.md", "tests/test-dataset_names.R"]
+    notes: >
+      REQUESTED by the team on 2026-10-21, on the "DataSet_Name_Update" branch.
+      Rename the two example datasets in the user-facing pickers:
+      scenario_one_good was shown as "Scenario one: good" and is now "Dataset 1";
+      scenario_one_bad was shown as "Scenario one: bad" and is now "Dataset 2".
+      The ids and the folders do NOT move: the internal ids stay
+      scenario_one_good / scenario_one_bad, the folders stay
+      data/scenario_one_good/ and data/scenario_one_bad/, and app/data mirrors
+      them. So this is a label change only - no file changes, no statistic can
+      move, and every test that drives the picker by id still means the same
+      thing. Three decisions the team made rather than the agent:
+      (1) the scope is the labels, the help text around them, and the docs;
+      (2) the ids and folders stay as they are;
+      (3) the labels are exactly "Dataset 1" and "Dataset 2", with no hint in
+      the label itself.
+      The one real trap: DATASET_HELP and DATASET_HELP_SHORT currently explain
+      which set is which by using the words "good" and "bad" - "Good is the
+      mixed set. Bad is ordinary noise." Once the labels read "Dataset 1" and
+      "Dataset 2" those words no longer appear anywhere the manager can see, so
+      the help lines must carry the meaning instead and name the new labels:
+      Dataset 1 is the mixed set, Dataset 2 is ordinary noise. Otherwise the
+      dropdown would offer two names that the caption beside it never mentions.
+      "General demo (planted failures)" is unchanged, and the README dataset
+      table and the Demo.md walkthrough line are updated to the new names.
+    definition_of_done: >
+      Both pickers - the Overview dataset dropdown and the Data page picker -
+      offer "Dataset 1" and "Dataset 2" in place of "Scenario one: good" and
+      "Scenario one: bad", with "General demo (planted failures)" unchanged, and
+      the help text on both pages names the new labels rather than calling them
+      good and bad, asserted by rendering the real pickers through the real
+      server and reading the option labels. The internal ids and folders are
+      unchanged, so switching to Dataset 1 still loads scenario_one_good and
+      still reaches the same numbers: units at risk 67 for Dataset 1 and 275 for
+      Dataset 2, exactly as before. No statistic moves, the full test suite
+      prints 0 failures with no existing assertion weakened, and a negative
+      control confirms the new test fails when a label reverts to the old name
+      or the help text stops naming the new labels. DEMO OK and WORKFLOW OK
+      still print with every published number unchanged, README.md and Demo.md
+      show the new names, and the app/manifest.json app.R checksum is
+      refreshed by hand as md5 of the LF-normalised app.R bytes with all bundled
+      checksums matching.
+    result: >
+      The two example datasets are renamed in both pickers: scenario_one_good now shows as "Dataset 1" and
+      scenario_one_bad as "Dataset 2", with "General demo (planted failures)" unchanged. Read live in a
+      browser off the running app, both pickers agree: the Overview dropdown and the Data page picker each
+      offer General demo (planted failures), Dataset 1 and Dataset 2, read out of selectize as {general:
+      General demo (planted failures), scenario_one_good: Dataset 1, scenario_one_bad: Dataset 2}. The
+      trap this rename creates, and the reason it is more than a two-line change: DATASET_HELP and
+      DATASET_HELP_SHORT explained which set was which using the words "good" and "bad" - those words WERE
+      the old labels. Once the labels become "Dataset 1" and "Dataset 2" the caption named two datasets
+      the manager cannot see, so the help lines now name the new labels and say which is which: the
+      Overview card reads "Dataset 2 is ordinary noise. Dataset 1 is the mixed set.", the Data page reads
+      "Dataset 1: six fridges that each behave differently. Dataset 2: all six are ordinary noise, nothing
+      fails.", and the Docs page step that said "Bad is ordinary noise. Good is the mixed set." was
+      updated to match. A code comment records why the wording moved, so it is not silently restored. The
+      rename is cosmetic and the numbers prove it: the internal ids stay scenario_one_good and
+      scenario_one_bad, the folders stay data/scenario_one_good/ and data/scenario_one_bad/, and app/data
+      still mirrors them byte for byte, so no CSV moved and no statistic can move. Dataset 1 still loads
+      scenario_one_good and still reaches 67 units at risk; Dataset 2 still loads scenario_one_bad and
+      still reaches 275, asserted through the real server. Red first: tests/test-dataset_names.R failed
+      before the app change, 10+ failures naming the old labels and the help text that never mentioned the
+      new ones. Quoted: tests/test-dataset_names.R FAIL 0 | WARN 0 | SKIP 0 | PASS 31, the full suite FAIL
+      0 | WARN 0 | SKIP 0 | PASS 1443 (was 1408), app/workflow.R WORKFLOW OK, and demo/show_numbers.R DEMO
+      OK with the same published numbers (4 fridges needing action, 283 units at risk, average Ppk 5.72,
+      48.0 s). Six negative controls, each confirmed to fail the new file: the Dataset 1 label reverting
+      FAIL 7, the Dataset 2 label reverting FAIL 7, the two labels swapped so Dataset 1 is the bad folder
+      FAIL 2, the Overview help line reverting to good/bad FAIL 2, the long help dropping the Dataset 1
+      name FAIL 1, and the General label changed FAIL 2 - that last one is the control for the controls,
+      proving the mutations really reach the parsed app rather than a stale copy. README.md dataset table
+      and the Demo.md walkthrough line show the new names. app/manifest.json app.R checksum moved
+      d33bea9ece0c86466a8e0449b943cf5b to 9dc895d4a9feae6219893d0b44363b3f in a one-line diff preserving
+      CRLF and the trailing newline; all 22 bundled checksums match and the platform stays 4.5.2.
+
+  - id: H-47
+    title: "Demo.md walkthrough: the Overview card line describes the old fridge-card layout, not the one that shipped"
+    points: "tool documentation: the walkthrough is a script someone reads aloud while the app is on screen, so it must not describe a card that is no longer there"
+    status: done
+    owner: "agent"
+    started_at: "2026-10-21"
+    owns: ["Demo.md"]
+    notes: >
+      FOUND while doing H-46 on the "DataSet_Name_Update" branch, and left out of
+      that task because it is a different subject and outside its owns. Raised
+      with the team, who asked for it as its own task.
+      H-40 and H-41 redesigned the Overview fridge card: the numbers moved into a
+      single right-hand column beside a 180 px chart, and the risk priority
+      number is now printed as a product inside that column. Demo.md has not
+      caught up. Two lines are wrong or contradictory:
+        Line 28 says the card "does not repeat the formula in a sentence" - that
+        is still true and worth keeping.
+        Line 29 says the card shows "blood units, Ppk, RPN, mean and standard
+        deviation to its right, then the RPN breakdown and that fridge's own
+        special-cause sentence". There is no separate "RPN breakdown" element any
+        more. The app prints five card_stat() rows - Blood units, Ppk, RPN, Mean,
+        Std dev - and the breakdown is INSIDE the RPN value, formatted as
+        sprintf("%d (%d x %d x %d)", rpn, severity, occurrence, urgency), so a
+        card reads "RPN 4 (10 x 1 x 4)". The only text under the stats row is the
+        fridge's own special-cause sentence.
+      So line 29 describes a layout that was removed, and it also overlaps line
+      28: both try to describe how the formula reaches the page. The fix is to
+      describe the card that actually renders - chart on the left, five labelled
+      rows on the right with the RPN carrying its three factors in brackets, the
+      fridge's own sentence beneath - and to drop the phantom breakdown element.
+      Documentation only. Nothing in app/ changes, so no number, label or
+      statistic can move, and app/manifest.json does not need a new checksum.
+      The rest of the walkthrough was read against the app while this was found
+      and is accurate as it stands, so this task is scoped to the card lines
+      unless the writer finds another stale claim while editing.
+    definition_of_done: >
+      Demo.md's Overview section describes the fridge card the app actually
+      renders: a chart on the left with the numbers in one column to its right,
+      the risk priority number printed with its three factors in brackets as the
+      app formats it, and the fridge's own special-cause sentence below. No line
+      still claims a separate RPN breakdown element exists, and no line
+      contradicts another about how the formula reaches the card. Checked by
+      reading the rendered card text out of the real server for a demo fridge and
+      confirming every claim in the section matches what the card prints, so the
+      wording is verified against the app rather than against the older draft.
+      No file under app/ is touched, so the full test suite still prints 0
+      failures, DEMO OK and WORKFLOW OK still print, and every published number is
+      unchanged.
+    result: >
+      Demo.md's Overview section now describes the fridge card the app actually renders. Two lines were
+      wrong or contradictory after H-40 and H-41 moved the numbers into a single column beside a 180 px
+      chart: the old line claimed a separate 'RPN breakdown' element under the numbers, which does not
+      exist, and the line above it described how the formula reaches the card in a way that overlapped.
+      There is no separate breakdown element: the app prints five card_stat() rows - Blood units, Ppk,
+      RPN, Mean, Std dev - and the breakdown lives INSIDE the RPN value. Rewritten to say the card carries
+      the RPN with its three factors in brackets as the app formats it, and that the formula is never
+      repeated as a sentence. Verified against the running app rather than against the older draft: read
+      the rendered card text out of the real server and checked every claim in the section, 22 checks, all
+      PASS. Quoted from the render: F01 reads 'Blood units 12 | Ppk 5.54 | RPN 15 (3 x 5 x 1) | Mean (C)
+      3.50 | Std dev (C) 0.15 | No special-cause flag.', and the card contains no 'RPN breakdown' phrase
+      and no 'Risk priority number:' sentence. All six demo fridges render in the quoted form (F02 900 (9
+      x 10 x 10), F04 100 (10 x 10 x 1), F03 50 (5 x 10 x 1), F06 54 (6 x 9 x 1), F05 18 (3 x 6 x 1), F01
+      15 (3 x 5 x 1)), so the example the doc quotes is the real format and not one card's coincidence.
+      Documentation only and the diff proves it: git status shows only CONTRACT.yaml and Demo.md changed,
+      no file under app/ was touched, so no number, label, threshold or statistic can move and
+      app/manifest.json needs no new checksum - the app.R checksum stays 9dc895d4a9feae6219893d0b44363b3f.
+      Quoted: the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1443 (unchanged from H-46, as expected when
+      app/ is untouched), app/workflow.R WORKFLOW OK, and demo/show_numbers.R DEMO OK with every published
+      number the same.
+
+  - id: H-48
     title: "Docs methods drop two cards, and the codebook link points at CODEBOOK.md"
     points: "tool clarity: the methods section shows the equations a manager uses, and the codebook link opens the codebook"
     status: done
@@ -1634,7 +1784,8 @@ tasks:
       REQUESTED by the team on 2026-10-21. Statistical Methods drops the
       lag-1 card and the hours-to-a-spec-limit card. The Data codebook link
       opens CODEBOOK.md. CODEBOOK.md drops those two entries. The functions
-      stay in app/R. No statistic changes.
+      stay in app/R. Recorded as H-48 because origin/main already used H-46
+      and H-47. No statistic changes.
     definition_of_done: >
       The Docs page has no lag-1 equation and no hours-to-a-spec equation,
       and its codebook link is the CODEBOOK.md URL. CODEBOOK.md has no
@@ -1645,8 +1796,8 @@ tasks:
       Statistical Methods no longer has a lag-1 card or an hours-to-a-spec
       card. The Data codebook link opens CODEBOOK.md. CODEBOOK.md no longer
       lists the forecast-horizon rule, the hours-to-spec row, or the lag-1
-      note. Quoted: the full suite FAIL 0 | WARN 0 | SKIP 0 | PASS 1410
-      (was 1408), app/workflow.R WORKFLOW OK, demo/show_numbers.R DEMO OK.
-      app/manifest.json's app.R checksum moved from
-      d33bea9ece0c86466a8e0449b943cf5b to 58eedd177891aa217ae786623573e300.
-      No statistic moved.
+      note. Merged with origin/main, which already had H-46 (Dataset 1 and
+      Dataset 2) and H-47. Quoted before the merge: the full suite FAIL 0 |
+      WARN 0 | SKIP 0 | PASS 1410, app/workflow.R WORKFLOW OK,
+      demo/show_numbers.R DEMO OK. After the merge, app/manifest.json's
+      app.R checksum is 376f0bc44b15d86d4b9b8c86249f65f8. No statistic moved.

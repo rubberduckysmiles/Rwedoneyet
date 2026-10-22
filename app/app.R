@@ -21,20 +21,23 @@ data_dir <- if (dir.exists(outside_data)) outside_data else inside_data
 DATASETS <- c(general = "", scenario_one_good = "scenario_one_good",
               scenario_one_bad = "scenario_one_bad")
 DATASET_LABELS <- c(general = "General demo (planted failures)",
-                    scenario_one_good = "Scenario one: good",
-                    scenario_one_bad = "Scenario one: bad")
+                    scenario_one_good = "Dataset 1",
+                    scenario_one_bad = "Dataset 2")
 # One source of truth for the picker's choices and its help text, so the Data page and the
 # Overview cannot offer different lists or describe the same dataset in two ways.
 # Indexed by dataset id: DATASET_LABELS[DATASETS] would look up the empty folder name, so
 # the names are taken from the labels' own names instead.
 DATASET_CHOICES <- stats::setNames(names(DATASETS), unname(DATASET_LABELS[names(DATASETS)]))
+# "Dataset 1" and "Dataset 2" name the sets but do not say what is in them, so the help
+# text carries that: it names the labels and says which is which. The old wording said
+# "Good" and "Bad", which were the old labels, and it would now describe names that no
+# longer appear anywhere the manager can see.
 DATASET_HELP <- paste("General: six fridges with planted failures.",
-                      "Good: six fridges that each behave differently.",
-                      "Bad: all six are ordinary noise, nothing fails.")
-# The Overview card has room for one line. The names "good" and "bad" do not
-# describe the files, so this line says what they actually are. The Data page
-# keeps the longer DATASET_HELP.
-DATASET_HELP_SHORT <- "Bad is ordinary noise. Good is the mixed set."
+                      "Dataset 1: six fridges that each behave differently.",
+                      "Dataset 2: all six are ordinary noise, nothing fails.")
+# The Overview card has room for one line, so this line says what the two names actually
+# are. The Data page keeps the longer DATASET_HELP.
+DATASET_HELP_SHORT <- "Dataset 2 is ordinary noise. Dataset 1 is the mixed set."
 
 theme <- bslib::bs_theme(preset = "shiny", primary = "#B3202A", font = bslib::font_google("Inter"))
 
@@ -852,7 +855,7 @@ docs_page <- function() {
         tags$li(
           tags$div(
             tags$strong("Data."),
-            "From the Overview, load an example dataset. General is the planted week. Bad is ordinary noise. Good is the mixed set. The Data page has the same picker, and it can take three files the lab uploads."
+            "From the Overview, load an example dataset. General is the planted week. Dataset 2 is ordinary noise. Dataset 1 is the mixed set. The Data page has the same picker, and it can take three files the lab uploads."
           )
         ),
         tags$li(
